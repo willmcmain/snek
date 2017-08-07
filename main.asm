@@ -1,14 +1,18 @@
 ; Snek!
 
 ; Interrupts
-SECTION "Vblank",ROM0[$0040]
+SECTION "Vertical Blank IRQ",ROM0[$0040]
+    jp vblank
+
+SECTION "LCDC IRQ",ROM0[$0048]
     reti
-SECTION "LCDC",ROM0[$0048]
+
+SECTION "Timer Overflow IRQ",ROM0[$0050]
     reti
-SECTION "Timer_Overflow",ROM0[$0050]
+
+SECTION "Serial IRQ",ROM0[$0058]
     reti
-SECTION "Serial",ROM0[$0058]
-    reti
+
 SECTION "Joypad IRQ",ROM0[$0060]
     reti
 
@@ -39,26 +43,63 @@ DB $00 ; Checksum
 
 SECTION "Game Code",ROM0[$0150]
 main:
+    ld sp, $FFFF
+    call init
+.loop:
+    halt
+    nop ; need a nop after halt because of a bug in the gb hardware
+    ld a,[is_vblank]
+    or a
+    jr z,.loop
+    ld a, 0
+    ld [is_vblank], a
+    ; TODO process user input & update game state here
+    jr .loop
+
+
+vblank:
+    push af
+    push bc
+    push de
+    push hl
+    ld a, 1
+    ld [is_vblank], a
+    call $FF80
+    pop hl
+    pop de
+    pop bc
+    pop af
+    reti
+
+
+init:
     nop
     di
-    ld sp, $FFFF
 
     ; set everything up
     call stop_lcd
     call load_tiledata
     call load_bgdata
+    call init_sprite
 
     ; load pallette and start lcd
     ld a, %11100100
     ld [$FF47], a
-    ld a, $91
+    ld [$FF48], a
+    ld [$FF49], a
+    ld a, %10010011
     ld [$FF40], a
     ei
-.loop:
-    nop
-    jp .loop
 
-; Subroutines
+    ; enable interrupts
+    ld a, 1
+    ld [$FFFF], a
+
+    ; load DMA subroutine
+    call load_dma
+    ret
+
+
 stop_lcd:
 .wait
     ld a, [$FF44] ; LY
@@ -69,6 +110,7 @@ stop_lcd:
     res 7,a
     ld [$FF40], a
     ret
+
 
 load_tiledata:
     ld hl, EMPTY_TILE
@@ -85,25 +127,29 @@ load_tiledata:
     ld de, $8020
     ld bc, 16
     call memcpy
-    ret
+
+    ld hl, HEAD_TILE
+    ld de, $8030
+    ld bc, 16
+    call memcpy
 
 load_bgdata:
     ld d, $01
     ld hl, $9800
     ld bc, 32 * 32
-    call memfill
+    call memset
 
     ; top
     ld d, $02
     ld hl, $9800
     ld bc, 20
-    call memfill
+    call memset
 
     ; bottom
     ld d, $02
     ld hl, $9800 + 32 * 17
     ld bc, 20
-    call memfill
+    call memset
 
     ; sides
     ld b, 0
@@ -119,21 +165,50 @@ load_bgdata:
 
     inc b
     ld a, b
-    cp 18
+    cp 17
     jr c, .loop
+
     ret
 
 
-SECTION "Game Data",ROM0[$2000]
-EMPTY_TILE:
-DB $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+init_sprite:
+    ld d, $00
+    ld hl, sprite_head
+    ld bc, $A0
+    call memset
 
-GRASS_TILE:
-DB $00,$00,$40,$00,$01,$00,$20,$00,$20,$00,$04,$00,$08,$00,$00,$00
+    ld a, $50
+    ld [sprite_head], a
+    ld a, $48
+    ld [sprite_head+1], a
+    ld a, $03
+    ld [sprite_head+2], a
+    ld a, $00
+    ld [sprite_head+3], a
 
-BLOCK_TILE:
-DB $00,$FF,$00,$C3,$00,$BD,$00,$A5,$00,$A5,$00,$BD,$00,$C3,$00,$FF
+load_dma:
+    ld de, $FF80
+    ld hl, dma_copy
+    ld bc, dma_end-dma_copy
+    call memcpy
+    ret
 
-A_TILE:
-DB $3C,$3C,$66,$66,$66,$66,$00,$7E,$00,$66,$66,$00,$66,$00,$66,$00
 
+dma_copy:
+    ld a, sprite_head/$100
+    ld [$FF46], a
+    ld a, $28
+.loop:
+    dec a
+    jr nz, .loop
+    ret
+dma_end:
+
+
+SECTION "System RAM",WRAM0[$C000]
+is_vblank:
+    DS 1
+
+SECTION "Sprite Data",WRAM0[$C100]
+sprite_head:
+    DS 4

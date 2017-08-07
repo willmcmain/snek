@@ -2,8 +2,8 @@ SECTION "Memory Code",ROM0
 
 ; memcpy
 ; copy a block of bytes from one area to another
-; hl: address of bytes to copy
-; de: address to copy bytes to
+; hl: source address of bytes to copy
+; de: destination address to copy bytes to
 ; bc: number of bytes to copy
 memcpy::
     ld a, [hl+]
@@ -15,16 +15,16 @@ memcpy::
     jr nz, memcpy
     ret
 
-; memfill
+; memset
 ; fill a block of memory with a specific byte
 ; hl: starting address to fill
 ; bc: number of bytes to fill
 ; d: byte value to fill
-memfill::
+memset::
     ld [hl], d
     inc hl
     dec bc
     ld a, b
     or c
-    jr nz, memfill
+    jr nz, memset
     ret
