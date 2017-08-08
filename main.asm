@@ -1,4 +1,5 @@
 ; Snek!
+INCLUDE "hw.inc"
 
 ; Interrupts
 SECTION "Vertical Blank IRQ",ROM0[$0040]
@@ -53,7 +54,10 @@ main:
     jr z,.loop
     ld a, 0
     ld [is_vblank], a
-    ; TODO process user input & update game state here
+
+    ; process user input & update game state
+    call get_input
+    call move_snek
     jr .loop
 
 
@@ -84,31 +88,99 @@ init:
 
     ; load pallette and start lcd
     ld a, %11100100
-    ld [$FF47], a
-    ld [$FF48], a
-    ld [$FF49], a
+    ld [rBGP], a
+    ld [rOBP0], a
+    ld [rOBP1], a
     ld a, %10010011
-    ld [$FF40], a
+    ld [rLCDC], a
     ei
 
     ; enable interrupts
-    ld a, 1
-    ld [$FFFF], a
+    ld a, %00010001
+    ld [rIE], a
 
     ; load DMA subroutine
     call load_dma
     ret
 
 
+KEY_RIGHT  EQU $01
+KEY_LEFT   EQU $02
+KEY_UP     EQU $04
+KEY_DOWN   EQU $08
+KEY_A      EQU $10
+KEY_B      EQU $20
+KEY_SELECT EQU $40
+KEY_START  EQU $80
+
+
+get_input:
+    ld a, %00010000 ; select P14
+    ld [rP1], a
+    ld a, [rP1]
+    ld a, [rP1]
+    cpl
+    and $0F
+    swap a
+    ld b, a
+    ld a, %00100000 ; select P15
+    ld [rP1], a
+    ld a, [rP1]
+    ld a, [rP1]
+    ld a, [rP1]
+    ld a, [rP1]
+    ld a, [rP1]
+    ld a, [rP1]
+    cpl
+    and $0F
+    or b
+    ld [user_input], a
+    ret
+
+
+move_snek:
+    ld a, [user_input]
+    ld b, a
+
+    and KEY_RIGHT
+    jr z,.left
+    ld a, [sprite_head+1]
+    inc a
+    ld [sprite_head+1], a
+.left
+    ld a, b
+    and KEY_LEFT
+    jr z,.up
+    ld a, [sprite_head+1]
+    dec a
+    ld [sprite_head+1], a
+.up
+    ld a, b
+    and KEY_UP
+    jr z,.down
+    ld a, [sprite_head]
+    dec a
+    ld [sprite_head], a
+.down
+    ld a, b
+    and KEY_DOWN
+    jr z,.end
+    ld a, [sprite_head]
+    inc a
+    ld [sprite_head], a
+.end
+    ret
+
+
 stop_lcd:
 .wait
-    ld a, [$FF44] ; LY
+    ld a, [rLY]
     cp 144
     jr nz,.wait
 
-    ld a, [$FF40] ; LCDC
+    ld a, [rLCDC]
     res 7,a
-    ld [$FF40], a
+    ld [rLCDC], a
     ret
 
 
@@ -196,7 +268,7 @@ load_dma:
 
 dma_copy:
     ld a, sprite_head/$100
-    ld [$FF46], a
+    ld [rDMA], a
     ld a, $28
 .loop:
     dec a
@@ -207,6 +279,8 @@ dma_end:
 
 SECTION "System RAM",WRAM0[$C000]
 is_vblank:
+    DS 1
+user_input:
     DS 1
 
 SECTION "Sprite Data",WRAM0[$C100]
