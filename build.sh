@@ -1,9 +1,9 @@
 #! /bin/bash
 
-rgbasm -obuild/main.o main.asm
-rgbasm -obuild/memory.o memory.asm
-rgbasm -obuild/data.o data.asm
-rgbasm -obuild/vars.o vars.asm
+rgbasm -obuild/main.o src/main.asm
+rgbasm -obuild/memory.o src/memory.asm
+rgbasm -obuild/data.o src/data.asm
+rgbasm -obuild/vars.o src/vars.asm
 
 rgblink -mbuild/snek.map -nbuild/snek.sym -obuild/snek.gb build/*.o
 
