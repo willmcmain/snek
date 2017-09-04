@@ -21,13 +21,14 @@ SECTION "Start",ROM0[$0100]
     nop
     jp main
 
-
+SECTION "Header",ROM0[$0104]
 ; Nintendo logo
 DB $CE,$ED,$66,$66,$CC,$0D,$00,$0B,$03,$73,$00,$83,$00,$0C,$00,$0D
 DB $00,$08,$11,$1F,$88,$89,$00,$0E,$DC,$CC,$6E,$E6,$DD,$DD,$D9,$99
 DB $BB,$BB,$67,$63,$6E,$0E,$EC,$CC,$DD,$DC,$99,$9F,$BB,$B9,$33,$3E
 
 DB "SNEK!",0,0,0,0,0,0 ; Game title, must be padded to 11 bytes
+DB 0,0,0,0 ; Mfg code
 DB $00 ; $80 for Gameboy Color
 DB $00 ; License code 1
 DB $00 ; License code 2
@@ -35,11 +36,11 @@ DB $00 ; $03 for Super Gameboy
 DB $00 ; Cartridge Type
 DB $00 ; ROM Size
 DB $00 ; Cart RAM Size
-DB $00 ; Destination code
+DB $01 ; Destination code
 DB $33 ; Licensee code, must be $33
 DB $00 ; Mask ROM version
-DB $00 ; Compplement check
-DB $00 ; Checksum
+DB $00 ; Complement check
+DB $0000 ; Checksum
 
 
 SECTION "Game Code",ROM0[$0150]
@@ -49,11 +50,11 @@ main:
 .loop:
     halt
     nop ; need a nop after halt because of a bug in the gb hardware
-    ld a,[is_vblank]
+    ld a,[IsVblank]
     or a
     jr z,.loop
     ld a, 0
-    ld [is_vblank], a
+    ld [IsVblank], a
 
     ; process user input & update game state
     call get_input
@@ -67,7 +68,7 @@ vblank:
     push de
     push hl
     ld a, 1
-    ld [is_vblank], a
+    ld [IsVblank], a
     call $FF80
     pop hl
     pop de
@@ -134,42 +135,127 @@ get_input:
     cpl
     and $0F
     or b
-    ld [user_input], a
+    ld [UserInput], a
     ret
 
 
 move_snek:
-    ld a, [user_input]
-    ld b, a
+    ; when we're in the middle of a tile, we can turn
+    ld a, [SpriteHead+1]
+    and $07
+    jr nz, .endturn
+    ld a, [SpriteHead]
+    and $07
+    jr nz, .endturn
 
+    ld a, [UserInput]
+    ld b, a
     and KEY_RIGHT
     jr z,.left
-    ld a, [sprite_head+1]
-    inc a
-    ld [sprite_head+1], a
+    ld a, 1
+    ld [SnekFace], a
+    ld a, $04
+    ld [SpriteHead+2], a
+    ld a, [SpriteHead+3]
+    res 6, a
+    res 5, a
+    ld [SpriteHead+3], a
 .left
     ld a, b
     and KEY_LEFT
     jr z,.up
-    ld a, [sprite_head+1]
-    dec a
-    ld [sprite_head+1], a
+    ld a, 3
+    ld [SnekFace], a
+    ld a, $04
+    ld [SpriteHead+2], a
+    ld a, [SpriteHead+3]
+    res 6, a
+    set 5, a
+    ld [SpriteHead+3], a
 .up
     ld a, b
     and KEY_UP
     jr z,.down
-    ld a, [sprite_head]
-    dec a
-    ld [sprite_head], a
+    ld a, 0
+    ld [SnekFace], a
+    ld a, $03
+    ld [SpriteHead+2], a
+    ld a, [SpriteHead+3]
+    res 6, a
+    res 5, a
+    ld [SpriteHead+3], a
 .down
     ld a, b
     and KEY_DOWN
-    jr z,.end
-    ld a, [sprite_head]
+    jr z,.endturn
+    ld a, 2
+    ld [SnekFace], a
+    ld a, $03
+    ld [SpriteHead+2], a
+    ld a, [SpriteHead+3]
+    set 6, a
+    res 5, a
+    ld [SpriteHead+3], a
+.endturn
+
+    ld a, [SnekFace]
+    cp 0
+    jr nz, .move_down
+    ld a, [SpriteHead]
+    dec a
+    ld [SpriteHead], a
+    jr .end
+.move_down
+    ld a, [SnekFace]
+    cp 2
+    jr nz, .move_left
+    ld a, [SpriteHead]
     inc a
-    ld [sprite_head], a
+    ld [SpriteHead], a
+    jr .end
+.move_left
+    ld a, [SnekFace]
+    cp 3
+    jr nz, .move_right
+    ld a, [SpriteHead+1]
+    dec a
+    ld [SpriteHead+1], a
+    jr .end
+.move_right
+    ld a, [SnekFace]
+    cp 1
+    jr nz, .end
+    ld a, [SpriteHead+1]
+    inc a
+    ld [SpriteHead+1], a
+    jr .end
 .end
+    call check_wall_collision
     ret
+
+
+check_wall_collision:
+    ld a, 0
+    ld [WallCollision], a
+
+    ld a, [SpriteHead+1]
+    cp 16 ; 8px wall + width of sprite
+    jr c, .true
+    cp 152 ; 160 - 8px wall
+    jr nc, .true
+    
+    ld a, [SpriteHead]
+    cp 24 ; 8px wall + height of sprite
+    jr c, .true
+    cp 144
+    jr nc, .true
+    
+    ret
+.true:
+    ld a, 1
+    ld [WallCollision], a
+    ret
+
 
 
 stop_lcd:
@@ -200,8 +286,13 @@ load_tiledata:
     ld bc, 16
     call memcpy
 
-    ld hl, HEAD_TILE
+    ld hl, HEAD_TILE_UP
     ld de, $8030
+    ld bc, 16
+    call memcpy
+
+    ld hl, HEAD_TILE_RIGHT
+    ld de, $8040
     ld bc, 16
     call memcpy
 
@@ -245,18 +336,18 @@ load_bgdata:
 
 init_sprite:
     ld d, $00
-    ld hl, sprite_head
+    ld hl, SpriteHead 
     ld bc, $A0
     call memset
 
     ld a, $50
-    ld [sprite_head], a
+    ld [SpriteHead], a
     ld a, $48
-    ld [sprite_head+1], a
+    ld [SpriteHead+1], a
     ld a, $03
-    ld [sprite_head+2], a
+    ld [SpriteHead+2], a
     ld a, $00
-    ld [sprite_head+3], a
+    ld [SpriteHead+3], a
 
 load_dma:
     ld de, $FF80
@@ -267,7 +358,7 @@ load_dma:
 
 
 dma_copy:
-    ld a, sprite_head/$100
+    ld a, SpriteHead/$100
     ld [rDMA], a
     ld a, $28
 .loop:
@@ -275,14 +366,3 @@ dma_copy:
     jr nz, .loop
     ret
 dma_end:
-
-
-SECTION "System RAM",WRAM0[$C000]
-is_vblank:
-    DS 1
-user_input:
-    DS 1
-
-SECTION "Sprite Data",WRAM0[$C100]
-sprite_head:
-    DS 4
