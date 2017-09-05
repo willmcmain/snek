@@ -1,5 +1,5 @@
 ; Snek!
-INCLUDE "hw.inc"
+INCLUDE "src/hw.inc"
 
 ; Interrupts
 SECTION "Vertical Blank IRQ",ROM0[$0040]
@@ -138,6 +138,47 @@ get_input:
     ld [UserInput], a
     ret
 
+SUBPIXELS EQU 8
+SNEK_SPEED EQU 6
+
+SR3_16: MACRO
+    srl \1
+    rr \2
+    srl \1
+    rr \2
+    srl \1
+    rr \2
+    ENDM
+
+UPDATE_SNEK_POSITION: MACRO
+    ; move the snek subpixel pos
+    ld a, [SnekPos\1]
+    ld h, a
+    ld a, [SnekPos\1+1]
+    ld l, a
+    ld b, $0
+    ld c, \2
+    add hl, bc
+    ld a, h
+    ld [SnekPos\1], a
+    ld a, l
+    ld [SnekPos\1+1], a
+    ENDM
+
+UPDATE_SNEK_POSITION_NEG: MACRO
+    ; move the snek subpixel pos
+    ld a, [SnekPos\1]
+    ld h, a
+    ld a, [SnekPos\1+1]
+    ld l, a
+    ld b, $FF
+    ld c, -\2
+    add hl, bc
+    ld a, h
+    ld [SnekPos\1], a
+    ld a, l
+    ld [SnekPos\1+1], a
+    ENDM
 
 move_snek:
     ; when we're in the middle of a tile, we can turn
@@ -201,32 +242,37 @@ move_snek:
     ld a, [SnekFace]
     cp 0
     jr nz, .move_down
-    ld a, [SpriteHead]
-    dec a
+
+    UPDATE_SNEK_POSITION_NEG Y,SNEK_SPEED
+    SR3_16 h,l
+    ld a, l
     ld [SpriteHead], a
-    jr .end
+    jp .end
 .move_down
     ld a, [SnekFace]
     cp 2
     jr nz, .move_left
-    ld a, [SpriteHead]
-    inc a
+    UPDATE_SNEK_POSITION Y,SNEK_SPEED
+    SR3_16 h,l
+    ld a, l
     ld [SpriteHead], a
     jr .end
 .move_left
     ld a, [SnekFace]
     cp 3
     jr nz, .move_right
-    ld a, [SpriteHead+1]
-    dec a
+    UPDATE_SNEK_POSITION_NEG X,SNEK_SPEED
+    SR3_16 h,l
+    ld a, l
     ld [SpriteHead+1], a
     jr .end
 .move_right
     ld a, [SnekFace]
     cp 1
     jr nz, .end
-    ld a, [SpriteHead+1]
-    inc a
+    UPDATE_SNEK_POSITION X,SNEK_SPEED
+    SR3_16 h,l
+    ld a, l
     ld [SpriteHead+1], a
     jr .end
 .end
@@ -348,6 +394,19 @@ init_sprite:
     ld [SpriteHead+2], a
     ld a, $00
     ld [SpriteHead+3], a
+
+    ; a = 0
+    ld [SnekFace], a
+
+    ld a, $02
+    ld [SnekPosX], a
+    ld a, $40
+    ld [SnekPosX+1], a
+    ld a, $02
+    ld [SnekPosY], a
+    ld a, $80
+    ld [SnekPosY+1], a
+
 
 load_dma:
     ld de, $FF80

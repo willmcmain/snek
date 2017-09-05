@@ -7,6 +7,10 @@ WallCollision::
     DS 1
 SnekFace:: ; 0 = up, 1 = right, 2 = down, 3 = left
     DS 1
+SnekPosX::
+    DS 2
+SnekPosY::
+    DS 2
 
 SECTION "Sprite Data",WRAM0[$C100]
 SpriteHead::
