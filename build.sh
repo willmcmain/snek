@@ -1,10 +1,12 @@
 #! /bin/bash
+set -e
 
-rgbasm -obuild/main.o src/main.asm
-rgbasm -obuild/memory.o src/memory.asm
-rgbasm -obuild/data.o src/data.asm
-rgbasm -obuild/vars.o src/vars.asm
+for f in src/*.asm; do
+    echo "Assembling $f ..."
+    file=$(basename "$f" .asm)
+    rgbasm -Lh -obuild/$file.o src/$file.asm
+done
 
+echo "Linking..."
 rgblink -mbuild/snek.map -nbuild/snek.sym -obuild/snek.gb build/*.o
-
 rgbfix -v -p 0 build/snek.gb

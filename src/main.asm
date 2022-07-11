@@ -58,7 +58,6 @@ main:
 
     ; process user input & update game state
     call get_input
-    call move_snek
     jr .loop
 
 
@@ -69,7 +68,6 @@ vblank:
     push hl
     ld a, 1
     ld [IsVblank], a
-    call $FF80
     pop hl
     pop de
     pop bc
@@ -85,7 +83,14 @@ init:
     call stop_lcd
     call load_tiledata
     call load_bgdata
-    call init_sprite
+    call init_snek
+    call load_snek
+    ; call init_sprite
+    ; zero out OAM
+    ld d, $00
+    ld hl, OAM_START
+    ld bc, OAM_END - OAM_START
+    call memset
 
     ; load pallette and start lcd
     ld a, %11100100
@@ -94,25 +99,15 @@ init:
     ld [rOBP1], a
     ld a, %10010011
     ld [rLCDC], a
-    ei
 
     ; enable interrupts
     ld a, %00010001
     ld [rIE], a
+    ei
 
     ; load DMA subroutine
-    call load_dma
+    ; call load_dma
     ret
-
-
-KEY_RIGHT  EQU $01
-KEY_LEFT   EQU $02
-KEY_UP     EQU $04
-KEY_DOWN   EQU $08
-KEY_A      EQU $10
-KEY_B      EQU $20
-KEY_SELECT EQU $40
-KEY_START  EQU $80
 
 
 get_input:
@@ -138,171 +133,6 @@ get_input:
     ld [UserInput], a
     ret
 
-SUBPIXELS EQU 8
-SNEK_SPEED EQU 6
-
-SR3_16: MACRO
-    srl \1
-    rr \2
-    srl \1
-    rr \2
-    srl \1
-    rr \2
-    ENDM
-
-UPDATE_SNEK_POSITION: MACRO
-    ; move the snek subpixel pos
-    ld a, [SnekPos\1]
-    ld h, a
-    ld a, [SnekPos\1+1]
-    ld l, a
-    ld b, $0
-    ld c, \2
-    add hl, bc
-    ld a, h
-    ld [SnekPos\1], a
-    ld a, l
-    ld [SnekPos\1+1], a
-    ENDM
-
-UPDATE_SNEK_POSITION_NEG: MACRO
-    ; move the snek subpixel pos
-    ld a, [SnekPos\1]
-    ld h, a
-    ld a, [SnekPos\1+1]
-    ld l, a
-    ld b, $FF
-    ld c, -\2
-    add hl, bc
-    ld a, h
-    ld [SnekPos\1], a
-    ld a, l
-    ld [SnekPos\1+1], a
-    ENDM
-
-move_snek:
-    ; when we're in the middle of a tile, we can turn
-    ld a, [SpriteHead+1]
-    and $07
-    jr nz, .endturn
-    ld a, [SpriteHead]
-    and $07
-    jr nz, .endturn
-
-    ld a, [UserInput]
-    ld b, a
-    and KEY_RIGHT
-    jr z,.left
-    ld a, 1
-    ld [SnekFace], a
-    ld a, $04
-    ld [SpriteHead+2], a
-    ld a, [SpriteHead+3]
-    res 6, a
-    res 5, a
-    ld [SpriteHead+3], a
-.left
-    ld a, b
-    and KEY_LEFT
-    jr z,.up
-    ld a, 3
-    ld [SnekFace], a
-    ld a, $04
-    ld [SpriteHead+2], a
-    ld a, [SpriteHead+3]
-    res 6, a
-    set 5, a
-    ld [SpriteHead+3], a
-.up
-    ld a, b
-    and KEY_UP
-    jr z,.down
-    ld a, 0
-    ld [SnekFace], a
-    ld a, $03
-    ld [SpriteHead+2], a
-    ld a, [SpriteHead+3]
-    res 6, a
-    res 5, a
-    ld [SpriteHead+3], a
-.down
-    ld a, b
-    and KEY_DOWN
-    jr z,.endturn
-    ld a, 2
-    ld [SnekFace], a
-    ld a, $03
-    ld [SpriteHead+2], a
-    ld a, [SpriteHead+3]
-    set 6, a
-    res 5, a
-    ld [SpriteHead+3], a
-.endturn
-
-    ld a, [SnekFace]
-    cp 0
-    jr nz, .move_down
-
-    UPDATE_SNEK_POSITION_NEG Y,SNEK_SPEED
-    SR3_16 h,l
-    ld a, l
-    ld [SpriteHead], a
-    jp .end
-.move_down
-    ld a, [SnekFace]
-    cp 2
-    jr nz, .move_left
-    UPDATE_SNEK_POSITION Y,SNEK_SPEED
-    SR3_16 h,l
-    ld a, l
-    ld [SpriteHead], a
-    jr .end
-.move_left
-    ld a, [SnekFace]
-    cp 3
-    jr nz, .move_right
-    UPDATE_SNEK_POSITION_NEG X,SNEK_SPEED
-    SR3_16 h,l
-    ld a, l
-    ld [SpriteHead+1], a
-    jr .end
-.move_right
-    ld a, [SnekFace]
-    cp 1
-    jr nz, .end
-    UPDATE_SNEK_POSITION X,SNEK_SPEED
-    SR3_16 h,l
-    ld a, l
-    ld [SpriteHead+1], a
-    jr .end
-.end
-    call check_wall_collision
-    ret
-
-
-check_wall_collision:
-    ld a, 0
-    ld [WallCollision], a
-
-    ld a, [SpriteHead+1]
-    cp 16 ; 8px wall + width of sprite
-    jr c, .true
-    cp 152 ; 160 - 8px wall
-    jr nc, .true
-    
-    ld a, [SpriteHead]
-    cp 24 ; 8px wall + height of sprite
-    jr c, .true
-    cp 144
-    jr nc, .true
-    
-    ret
-.true:
-    ld a, 1
-    ld [WallCollision], a
-    ret
-
-
 
 stop_lcd:
 .wait
@@ -318,52 +148,57 @@ stop_lcd:
 
 load_tiledata:
     ld hl, EMPTY_TILE
-    ld de, $8000
+    ld de, TILE_BLOCK_0
     ld bc, 16
     call memcpy
 
     ld hl, GRASS_TILE
-    ld de, $8010
+    ld de, TILE_BLOCK_0 + $10
     ld bc, 16
     call memcpy
 
     ld hl, BLOCK_TILE
-    ld de, $8020
+    ld de, TILE_BLOCK_0 + $20
     ld bc, 16
     call memcpy
 
     ld hl, HEAD_TILE_UP
-    ld de, $8030
+    ld de, TILE_BLOCK_0 + $30
     ld bc, 16
     call memcpy
 
     ld hl, HEAD_TILE_RIGHT
-    ld de, $8040
+    ld de, TILE_BLOCK_0 + $40
+    ld bc, 16
+    call memcpy
+
+    ld hl, SEGMENT_TILE
+    ld de, TILE_BLOCK_0 + $50
     ld bc, 16
     call memcpy
 
 load_bgdata:
-    ld d, $01
-    ld hl, $9800
+    ld d, $00
+    ld hl, TILE_MAP_0
     ld bc, 32 * 32
     call memset
 
     ; top
     ld d, $02
-    ld hl, $9800
+    ld hl, TILE_MAP_0
     ld bc, 20
     call memset
 
     ; bottom
     ld d, $02
-    ld hl, $9800 + 32 * 17
+    ld hl, TILE_MAP_0 + 32 * 17
     ld bc, 20
     call memset
 
     ; sides
     ld b, 0
     ld de, 0
-    ld hl, $9800
+    ld hl, TILE_MAP_0
 .loop
     ld de, 19
     add hl, de
@@ -378,50 +213,3 @@ load_bgdata:
     jr c, .loop
 
     ret
-
-
-init_sprite:
-    ld d, $00
-    ld hl, SpriteHead 
-    ld bc, $A0
-    call memset
-
-    ld a, $50
-    ld [SpriteHead], a
-    ld a, $48
-    ld [SpriteHead+1], a
-    ld a, $03
-    ld [SpriteHead+2], a
-    ld a, $00
-    ld [SpriteHead+3], a
-
-    ; a = 0
-    ld [SnekFace], a
-
-    ld a, $02
-    ld [SnekPosX], a
-    ld a, $40
-    ld [SnekPosX+1], a
-    ld a, $02
-    ld [SnekPosY], a
-    ld a, $80
-    ld [SnekPosY+1], a
-
-
-load_dma:
-    ld de, $FF80
-    ld hl, dma_copy
-    ld bc, dma_end-dma_copy
-    call memcpy
-    ret
-
-
-dma_copy:
-    ld a, SpriteHead/$100
-    ld [rDMA], a
-    ld a, $28
-.loop:
-    dec a
-    jr nz, .loop
-    ret
-dma_end:

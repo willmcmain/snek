@@ -12,7 +12,18 @@ SnekPosX::
 SnekPosY::
     DS 2
 
-SECTION "Sprite Data",WRAM0[$C100]
+; The number of current segments
+SnekPosArrayLen::
+    DS 1
+; Array of snek segments
+; Each segment is two bytes representing the x, y coordinate
+; of the segment.
+; 0 <= x <= 18
+; 0 <= y <= 16
+SnekPosArray::
+    DS 2 * 255
+
+SECTION "Sprite Data",WRAM0[$C800]
 SpriteHead::
     DS 4
     DS 156
