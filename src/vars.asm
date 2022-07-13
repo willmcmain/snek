@@ -5,12 +5,14 @@ UserInput::
     DS 1
 WallCollision::
     DS 1
+SnekMvCounter::
+    DS 1
 SnekFace:: ; 0 = up, 1 = right, 2 = down, 3 = left
     DS 1
 SnekPosX::
-    DS 2
+    DS 1
 SnekPosY::
-    DS 2
+    DS 1
 
 ; The number of current segments
 SnekPosArrayLen::
@@ -21,7 +23,7 @@ SnekPosArrayLen::
 ; 0 <= x <= 18
 ; 0 <= y <= 16
 SnekPosArray::
-    DS 2 * 255
+    DS 2 * 256
 
 SECTION "Sprite Data",WRAM0[$C800]
 SpriteHead::

@@ -58,6 +58,7 @@ main:
 
     ; process user input & update game state
     call get_input
+    call move_snek_foward
     jr .loop
 
 
@@ -66,6 +67,7 @@ vblank:
     push bc
     push de
     push hl
+    call load_snek
     ld a, 1
     ld [IsVblank], a
     pop hl
