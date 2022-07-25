@@ -31,10 +31,10 @@ dma_end:
 
 
 init_sprite::
-    ld d, $00
+    ld a, $00
     ld hl, SpriteHead
-    ld bc, $A0
-    call memset
+    ld c, $A0
+    call memset8
 
     ld a, $50
     ld [SpriteHead], a

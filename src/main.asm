@@ -89,10 +89,10 @@ init:
     call load_snek
     ; call init_sprite
     ; zero out OAM
-    ld d, $00
+    ld a, $00
     ld hl, OAM_START
-    ld bc, OAM_END - OAM_START
-    call memset
+    ld c, OAM_END - OAM_START
+    call memset8
 
     ; load pallette and start lcd
     ld a, %11100100
@@ -180,34 +180,35 @@ load_tiledata:
     call memcpy
 
 load_bgdata:
-    ld d, $00
+    ld a, $00
     ld hl, TILE_MAP_0
     ld bc, 32 * 32
-    call memset
+    call memset16
 
     ; top
-    ld d, $02
+    ld a, $02
     ld hl, TILE_MAP_0
-    ld bc, 20
-    call memset
+    ld c, 20
+    call memset8
 
     ; bottom
-    ld d, $02
+    ld a, $02
     ld hl, TILE_MAP_0 + 32 * 17
-    ld bc, 20
-    call memset
+    ld c, 20
+    call memset8
 
     ; sides
+    ld c, $02
     ld b, 0
     ld de, 0
     ld hl, TILE_MAP_0
 .loop
     ld de, 19
     add hl, de
-    ld [hl], $02
+    ld [hl], c
     ld de, 13
     add hl, de
-    ld [hl], $02
+    ld [hl], c
 
     inc b
     ld a, b
