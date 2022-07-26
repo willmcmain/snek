@@ -45,11 +45,10 @@ load_snek::
 
 .loop_segments
     push bc ; b = arraylen, c = counter
-    ; multiply array position by segment size
     ld b, 0
-    sla c
-    rl b
     ld hl, SnekPosArray
+    ; add index * 2 for segment size
+    add hl, bc
     add hl, bc
 
     ; load the x,y value of the segment into d, e
@@ -60,12 +59,15 @@ load_snek::
     ld e, [hl]
     inc e
 
-    ld hl, TILE_MAP_0
-    ; y * 32 => shift left 5x
-    ld b, 0
-    ld c, e
-    ld a, 5
-    call shift_left_16
+    ; multiply y by 32 and add to the tile map address
+    ld h, 0
+    ld l, e
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    ld bc, TILE_MAP_0
     add hl, bc
 
     ; add x to tile map address
@@ -111,7 +113,7 @@ move_snek_foward::
     ; multiply bytes by SNEK_SEGMENT_SIZE (=2)
     sla c
     rl b
-    call memcpy_reverse
+    call shift_segments
 
     ; decrement y to move forward
     ld a, [SnekPosY]
@@ -124,4 +126,26 @@ move_snek_foward::
     ld a, [SnekPosY]
     ld [SnekPosArray+1], a
 .end
+    ret
+
+
+shift_segments:
+    dec bc
+    add hl, bc
+    push hl
+    ld h, d
+    ld l, e
+    add hl, bc
+    ld d, h
+    ld e, l
+    pop hl
+    inc bc
+.loop
+    ld a, [hl-]
+    ld [de], a
+    dec de
+    dec bc
+    ld a, b
+    or c
+    jr nz, .loop
     ret

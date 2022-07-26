@@ -113,18 +113,18 @@ init:
 
 
 get_input:
-    ld a, %00010000 ; select P14
+    ld a, %00010000 ; select D-pad
     ld [rP1], a
+    ld a, [rP1]
+    ld a, [rP1]
     ld a, [rP1]
     ld a, [rP1]
     cpl
     and $0F
     swap a
     ld b, a
-    ld a, %00100000 ; select P15
+    ld a, %00100000 ; select buttons
     ld [rP1], a
-    ld a, [rP1]
-    ld a, [rP1]
     ld a, [rP1]
     ld a, [rP1]
     ld a, [rP1]
@@ -151,38 +151,38 @@ stop_lcd:
 load_tiledata:
     ld hl, EMPTY_TILE
     ld de, TILE_BLOCK_0
-    ld bc, 16
-    call memcpy
+    ld c, 16
+    call memcpy8
 
     ld hl, GRASS_TILE
     ld de, TILE_BLOCK_0 + $10
-    ld bc, 16
-    call memcpy
+    ld c, 16
+    call memcpy8
 
     ld hl, BLOCK_TILE
     ld de, TILE_BLOCK_0 + $20
-    ld bc, 16
-    call memcpy
+    ld c, 16
+    call memcpy8
 
     ld hl, HEAD_TILE_UP
     ld de, TILE_BLOCK_0 + $30
-    ld bc, 16
-    call memcpy
+    ld c, 16
+    call memcpy8
 
     ld hl, HEAD_TILE_RIGHT
     ld de, TILE_BLOCK_0 + $40
-    ld bc, 16
-    call memcpy
+    ld c, 16
+    call memcpy8
 
     ld hl, SEGMENT_TILE
     ld de, TILE_BLOCK_0 + $50
-    ld bc, 16
-    call memcpy
+    ld c, 16
+    call memcpy8
 
 load_bgdata:
     ld a, $00
     ld hl, TILE_MAP_0
-    ld bc, 32 * 32
+    ld bc, 32 * 18
     call memset16
 
     ; top

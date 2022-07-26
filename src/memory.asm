@@ -1,48 +1,11 @@
 SECTION "Memory Code",ROM0
 
-; memcpy
-; copy a block of bytes from one area to another
-;
-; * hl: source address of bytes to copy
-; * de: destination address to copy bytes to
-; * bc: number of bytes to copy
-memcpy::
-    ld a, [hl+]
-    ld [de], a
-    inc de
-    dec bc
-    ld a, b
-    or c
-    jr nz, memcpy
-    ret
-
-memcpy_reverse::
-    dec bc
-    add hl, bc
-    push hl
-    ld h, d
-    ld l, e
-    add hl, bc
-    ld d, h
-    ld e, l
-    pop hl
-    inc bc
-.loop
-    ld a, [hl-]
-    ld [de], a
-    dec de
-    dec bc
-    ld a, b
-    or c
-    jr nz, .loop
-    ret
-
 ; memcpy8
 ; copy a block of bytes from one area to another
 ;
-; * hl: source address of bytes to copy
-; * de: destination address to copy bytes to
 ; * c: number of bytes to copy
+; * de: destination address to copy bytes to
+; * hl: source address of bytes to copy
 memcpy8::
     ld a, [hl+]
     ld [de], a
@@ -50,6 +13,24 @@ memcpy8::
     dec c
     jr nz, memcpy8
     ret
+
+
+; memcpy
+; copy a block of bytes from one area to another
+;
+; * bc: number of bytes to copy
+; * de: destination address to copy bytes to
+; * hl: source address of bytes to copy
+memcpy16::
+    ld a, [hl+]
+    ld [de], a
+    inc de
+    dec bc
+    ld a, b
+    or c
+    jr nz, memcpy16
+    ret
+
 
 ; memset8
 ; fill a block of memory with a specific byte

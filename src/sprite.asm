@@ -14,8 +14,8 @@ SECTION "Sprite Code", ROM0
 load_dma::
     ld de, HRAM_START
     ld hl, dma_copy
-    ld bc, dma_end-dma_copy
-    call memcpy
+    ld c, dma_end-dma_copy
+    call memcpy8
     ret
 
 
@@ -67,6 +67,11 @@ SR3_16: MACRO
     rr \2
     srl \1
     rr \2
+    srl \1
+    rr \2
+    ENDM
+
+SR16: MACRO
     srl \1
     rr \2
     ENDM
