@@ -9,6 +9,8 @@ SnekMvCounter::
     DS 1
 SnekFace:: ; 0 = up, 1 = right, 2 = down, 3 = left
     DS 1
+SnekNextFace::
+    DS 1
 SnekPosX::
     DS 1
 SnekPosY::

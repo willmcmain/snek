@@ -8,15 +8,25 @@ SNEK_FACE_RIGHT EQU 1
 SNEK_FACE_DOWN EQU 2
 SNEK_FACE_LEFT EQU 3
 
+BUTTON_RIGHT  EQU $01
+BUTTON_LEFT   EQU $02
+BUTTON_UP     EQU $04
+BUTTON_DOWN   EQU $08
+BUTTON_A      EQU $10
+BUTTON_B      EQU $20
+BUTTON_SELECT EQU $40
+BUTTON_START  EQU $80
+
 ; number of frames between each snek movement
-SNEK_MOVEMENT EQU 60
+SNEK_MOVEMENT EQU 40
 
 SECTION "Snek Code", ROM0
 ;#######################################################################################
 ; initialize snek data
 snek_init::
-    ld a, SNEK_FACE_RIGHT
+    ld a, SNEK_FACE_UP
     ld [SnekFace], a
+    ld [SnekNextFace], a
 
     ld a, SNEK_START_X
     ld [SnekPosX], a
@@ -112,27 +122,21 @@ snek_vblank::
 ;#######################################################################################
 ; update snek each frame
 snek_update::
-    ; Each frame this is called, increment SnekMvCounter by one until it reaches
-    ; SNEK_MOVEMENT, then move the snake forward one tile
+    call set_direction
+
+    ; Each frame increment SnekMvCounter by one until it reaches SNEK_MOVEMENT
+    ; then move the snake forward one tile
     ld a, [SnekMvCounter]
     inc a
     ld [SnekMvCounter], a
     ld b, SNEK_MOVEMENT
     cp a, b
-    jp nz, .end
+    ret nz
 
+    ; reset counter
     ld a, 0
     ld [SnekMvCounter], a
 
-    ; copy snake segments one segment later
-    ld hl, SnekPosArray
-    ld de, SnekPosArray+SNEK_SEGMENT_SIZE
-    ld b, 0
-    ld a, [SnekPosArrayLen]
-    ld c, a
-    ; multiply bytes by SNEK_SEGMENT_SIZE (=2)
-    sla c
-    rl b
     call shift_segments
 
     call set_next_pos
@@ -142,18 +146,70 @@ snek_update::
     ld [SnekPosArray], a
     ld a, [SnekPosY]
     ld [SnekPosArray+1], a
-.end
     ret
 
 
 ;#######################################################################################
 set_direction:
     ; check for button direction
+    ld a, [UserInput]
+    ld b, a
+    or a
+    ret z
+
+    ld a, b
+    and BUTTON_RIGHT
+    jr nz, .right
+
+    ld a, b
+    and BUTTON_LEFT
+    jr nz, .left
+
+    ld a, b
+    and BUTTON_DOWN
+    jr nz, .down
+
+    ld a, b
+    and BUTTON_UP
+    jr nz, .up
+    ret
+
+; for each direction, we check if we're going the opposite direction before setting
+; the new direction
+.up
+    ld a, [SnekFace]
+    cp SNEK_FACE_DOWN
+    ret z
+    ld a, SNEK_FACE_UP
+    ld [SnekNextFace], a
+    ret
+.right
+    ld a, [SnekFace]
+    cp SNEK_FACE_LEFT
+    ret z
+    ld a, SNEK_FACE_RIGHT
+    ld [SnekNextFace], a
+    ret
+.down
+    ld a, [SnekFace]
+    cp SNEK_FACE_UP
+    ret z
+    ld a, SNEK_FACE_DOWN
+    ld [SnekNextFace], a
+    ret
+.left
+    ld a, [SnekFace]
+    cp SNEK_FACE_RIGHT
+    ret z
+    ld a, SNEK_FACE_LEFT
+    ld [SnekNextFace], a
+    ret
 
 
 ;#######################################################################################
 set_next_pos:
-    ld a, [SnekFace]
+    ld a, [SnekNextFace]
+    ld [SnekFace], a
     cp SNEK_FACE_UP
     jr z, .up
     cp SNEK_FACE_RIGHT
@@ -180,6 +236,16 @@ set_next_pos:
 
 ;#######################################################################################
 shift_segments:
+    ; copy snake segments one segment later
+    ld hl, SnekPosArray
+    ld de, SnekPosArray+SNEK_SEGMENT_SIZE
+    ld b, 0
+    ld a, [SnekPosArrayLen]
+    ld c, a
+    ; multiply bytes by SNEK_SEGMENT_SIZE (=2)
+    sla c
+    rl b
+
     dec bc
     add hl, bc
     push hl
