@@ -1,9 +1,9 @@
 SECTION "Memory Code",ROM0
 
-; memcpy8
-; copy a block of bytes from one area to another
+;#######################################################################################
+; copy up to 256 bytes from one area to another
 ;
-; * c: number of bytes to copy
+; * c: number of bytes to copy - will copy 256 if set to 0
 ; * de: destination address to copy bytes to
 ; * hl: source address of bytes to copy
 memcpy8::
@@ -15,7 +15,7 @@ memcpy8::
     ret
 
 
-; memcpy
+;#######################################################################################
 ; copy a block of bytes from one area to another
 ;
 ; * bc: number of bytes to copy
@@ -32,11 +32,11 @@ memcpy16::
     ret
 
 
-; memset8
+;#######################################################################################
 ; fill a block of memory with a specific byte
 ;
 ; * a: byte value to fill
-; * c: number of bytes to fill - Will copy 256 bytes if set to 0
+; * c: number of bytes to fill - will copy 256 bytes if set to 0
 ; * hl: starting address to fill
 memset8::
     ld [hl+], a
@@ -45,7 +45,7 @@ memset8::
     ret
 
 
-; memset16
+;#######################################################################################
 ; fill a block of memory with a specific byte
 ;
 ; * a: byte value to fill

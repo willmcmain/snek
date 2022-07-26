@@ -56,9 +56,9 @@ main:
     ld a, 0
     ld [IsVblank], a
 
-    ; process user input & update game state
+    ; process gamepad input & update game state
     call get_input
-    call move_snek_foward
+    call snek_update
     jr .loop
 
 
@@ -67,7 +67,7 @@ vblank:
     push bc
     push de
     push hl
-    call load_snek
+    call snek_vblank
     ld a, 1
     ld [IsVblank], a
     pop hl
@@ -85,8 +85,7 @@ init:
     call stop_lcd
     call load_tiledata
     call load_bgdata
-    call init_snek
-    call load_snek
+    call snek_init
     ; call init_sprite
     ; zero out OAM
     ld a, $00

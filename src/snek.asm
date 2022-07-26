@@ -3,8 +3,21 @@ SNEK_START_X EQU 9
 SNEK_START_Y EQU 8
 SNEK_SEGMENT_SIZE EQU 2
 
+SNEK_FACE_UP EQU 0
+SNEK_FACE_RIGHT EQU 1
+SNEK_FACE_DOWN EQU 2
+SNEK_FACE_LEFT EQU 3
+
+; number of frames between each snek movement
+SNEK_MOVEMENT EQU 60
+
 SECTION "Snek Code", ROM0
-init_snek::
+;#######################################################################################
+; initialize snek data
+snek_init::
+    ld a, SNEK_FACE_RIGHT
+    ld [SnekFace], a
+
     ld a, SNEK_START_X
     ld [SnekPosX], a
     ld a, SNEK_START_Y
@@ -36,9 +49,14 @@ init_snek::
     ld [hl+], a
     ld a, SNEK_START_Y + 3
     ld [hl+], a
-    ret
+    ; Intentionally fall through to call snek_vblank
 
-load_snek::
+
+;#######################################################################################
+; load snake tiles into VRAM each frame
+;
+; call once during each vblank
+snek_vblank::
     ld a, [SnekPosArrayLen]
     ld b, a
     ld c, 0
@@ -90,14 +108,16 @@ load_snek::
     ld [hl], $01
     ret
 
-; call each frame!
-move_snek_foward::
-    ; Each frame this is called, increment SnekMvCounter by one until it reaches the
-    ; target number (60), then move the snake forward one tile
+
+;#######################################################################################
+; update snek each frame
+snek_update::
+    ; Each frame this is called, increment SnekMvCounter by one until it reaches
+    ; SNEK_MOVEMENT, then move the snake forward one tile
     ld a, [SnekMvCounter]
     inc a
     ld [SnekMvCounter], a
-    ld b, 60
+    ld b, SNEK_MOVEMENT
     cp a, b
     jp nz, .end
 
@@ -115,10 +135,7 @@ move_snek_foward::
     rl b
     call shift_segments
 
-    ; decrement y to move forward
-    ld a, [SnekPosY]
-    dec a
-    ld [SnekPosY], a
+    call set_next_pos
 
     ; create new segment at beginning
     ld a, [SnekPosX]
@@ -129,6 +146,39 @@ move_snek_foward::
     ret
 
 
+;#######################################################################################
+set_direction:
+    ; check for button direction
+
+
+;#######################################################################################
+set_next_pos:
+    ld a, [SnekFace]
+    cp SNEK_FACE_UP
+    jr z, .up
+    cp SNEK_FACE_RIGHT
+    jr z, .right
+    cp SNEK_FACE_DOWN
+    jr z, .down
+    ; default left, decrement x
+    ld hl, SnekPosX
+    dec [hl]
+    ret
+.up ; decrement y
+    ld hl, SnekPosY
+    dec [hl]
+    ret
+.right ; increment x
+    ld hl, SnekPosX
+    inc [hl]
+    ret
+.down ; increment y
+    ld hl, SnekPosY
+    inc [hl]
+    ret
+
+
+;#######################################################################################
 shift_segments:
     dec bc
     add hl, bc
