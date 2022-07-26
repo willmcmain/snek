@@ -1,4 +1,6 @@
 SECTION "System RAM",WRAM0[$C000]
+SceneUpdate::
+    DS 2
 IsVblank::
     DS 1
 UserInput::

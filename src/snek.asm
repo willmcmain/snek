@@ -18,12 +18,18 @@ BUTTON_SELECT EQU $40
 BUTTON_START  EQU $80
 
 ; number of frames between each snek movement
-SNEK_MOVEMENT EQU 40
+SNEK_MOVEMENT EQU 20
 
 SECTION "Snek Code", ROM0
 ;#######################################################################################
 ; initialize snek data
 snek_init::
+    ld hl, snek_update
+    ld a, h
+    ld [SceneUpdate], a
+    ld a, l
+    ld [SceneUpdate+1], a
+
     ld a, SNEK_FACE_UP
     ld [SnekFace], a
     ld [SnekNextFace], a
@@ -138,6 +144,10 @@ snek_update::
     ld [SnekMvCounter], a
 
     call shift_segments
+    ; grow snake
+    ; ld a, [SnekPosArrayLen]
+    ; inc a
+    ; ld [SnekPosArrayLen], a
 
     call set_next_pos
 

@@ -58,7 +58,16 @@ main:
 
     ; process gamepad input & update game state
     call get_input
-    call snek_update
+
+    ; call SceneUpdate
+    ld hl, .return
+    push hl
+    ld a, [SceneUpdate]
+    ld h, a
+    ld a, [SceneUpdate+1]
+    ld l, a
+    jp hl
+.return
     jr .loop
 
 
@@ -186,7 +195,7 @@ load_bgdata:
 
     ; top
     ld a, $02
-    ld hl, TILE_MAP_0
+    ld hl, TILE_MAP_0 + 32
     ld c, 20
     call memset8
 
@@ -198,20 +207,18 @@ load_bgdata:
 
     ; sides
     ld c, $02
-    ld b, 0
-    ld de, 0
-    ld hl, TILE_MAP_0
+    ld b, 15
+    ld hl, TILE_MAP_0 + 32 * 2
 .loop
+    ld [hl], c
     ld de, 19
     add hl, de
+
     ld [hl], c
     ld de, 13
     add hl, de
-    ld [hl], c
 
-    inc b
-    ld a, b
-    cp 17
-    jr c, .loop
+    dec b
+    jr nz, .loop
 
     ret
