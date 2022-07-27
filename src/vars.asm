@@ -17,6 +17,10 @@ SnekPosX::
     DS 1
 SnekPosY::
     DS 1
+ApplePosX::
+    DS 1
+ApplePosY::
+    DS 1
 
 ; The number of current segments
 SnekPosArrayLen::

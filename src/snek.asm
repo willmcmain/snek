@@ -65,6 +65,8 @@ snek_init::
     ld [hl+], a
     ld a, SNEK_START_Y + 3
     ld [hl+], a
+
+    call random_apple_pos
     ; Intentionally fall through to call snek_vblank
 
 
@@ -121,7 +123,32 @@ snek_vblank::
     jr .loop_segments
 .end
     ; empty the final segment
-    ld [hl], $01
+    ld [hl], $00
+
+    ; draw the apple
+    ; x, y position into b, c
+    ld a, [ApplePosX]
+    ld b, a
+    ld a, [ApplePosY]
+    ld c, a
+
+    ; multiply y by 32
+    ld h, 0
+    ld l, c
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    ; then add x
+    ld d, 0
+    ld e, b
+    add hl, de
+    ; and add to the tile map address
+    ld de, TILE_MAP_0
+    add hl, de
+    
+    ld [hl], $06
     ret
 
 
@@ -138,6 +165,8 @@ snek_update::
     ld b, SNEK_MOVEMENT
     cp a, b
     ret nz
+
+    call random_apple_pos
 
     ; reset counter
     ld a, 0
@@ -274,4 +303,41 @@ shift_segments:
     ld a, b
     or c
     jr nz, .loop
+    ret
+
+
+;#######################################################################################
+random_apple_pos:
+    ; random number from 0 to 17
+    ldh a, [rDIV]
+    ld h, 0
+    ld l, a
+    ; multiply by 18: x * 16 + x + x
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    ld d, 0
+    ld e, a
+    add hl, de
+    add hl, de
+    ; take h by itself == hl / 256
+    ld a, h
+    ld [ApplePosX], a
+
+    ; random number from 0 to 14
+    ldh a, [rDIV]
+    ld h, 0
+    ld l, a
+    ; multiply by 15
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    ; equivalent to subtracting one:
+    ld de, $FFFF
+    add hl, de
+    ; take h by itself == hl / 256
+    ld a, h
+    ld [ApplePosY], a
     ret

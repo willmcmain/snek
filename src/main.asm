@@ -187,6 +187,11 @@ load_tiledata:
     ld c, 16
     call memcpy8
 
+    ld hl, APPLE_TILE
+    ld de, TILE_BLOCK_0 + $60
+    ld c, 16
+    call memcpy8
+
 load_bgdata:
     ld a, $00
     ld hl, TILE_MAP_0
