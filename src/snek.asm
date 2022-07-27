@@ -128,8 +128,10 @@ snek_vblank::
     ; draw the apple
     ; x, y position into b, c
     ld a, [ApplePosX]
+    inc a
     ld b, a
     ld a, [ApplePosY]
+    add a, 2
     ld c, a
 
     ; multiply y by 32
@@ -334,8 +336,12 @@ random_apple_pos:
     add hl, hl
     add hl, hl
     add hl, hl
-    ; equivalent to subtracting one:
-    ld de, $FFFF
+    ; subtract original number
+    ; twos complement
+    ld d, $FF
+    cpl
+    ld e, a
+    inc de
     add hl, de
     ; take h by itself == hl / 256
     ld a, h

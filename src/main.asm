@@ -102,6 +102,16 @@ init:
     ld c, OAM_END - OAM_START
     call memset8
 
+    ; set up rng
+    ldh a, [rDIV]
+    ld [RNG], a
+    nop
+    nop
+    nop
+    ldh a, [rDIV]
+    ld [RNG+1], a
+
+
     ; load pallette and start lcd
     ld a, %11100100
     ld [rBGP], a
@@ -115,8 +125,6 @@ init:
     ld [rIE], a
     ei
 
-    ; load DMA subroutine
-    ; call load_dma
     ret
 
 

@@ -21,6 +21,8 @@ ApplePosX::
     DS 1
 ApplePosY::
     DS 1
+RNG::
+    DS 2
 
 ; The number of current segments
 SnekPosArrayLen::
