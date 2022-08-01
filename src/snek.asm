@@ -311,7 +311,8 @@ shift_segments:
 ;#######################################################################################
 random_apple_pos:
     ; random number from 0 to 17
-    ldh a, [rDIV]
+    call advance_rng
+    ld a, [RNG]
     ld h, 0
     ld l, a
     ; multiply by 18: x * 16 + x + x
@@ -328,7 +329,8 @@ random_apple_pos:
     ld [ApplePosX], a
 
     ; random number from 0 to 14
-    ldh a, [rDIV]
+    call advance_rng
+    ld a, [RNG]
     ld h, 0
     ld l, a
     ; multiply by 15

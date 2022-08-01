@@ -105,9 +105,6 @@ init:
     ; set up rng
     ldh a, [rDIV]
     ld [RNG], a
-    nop
-    nop
-    nop
     ldh a, [rDIV]
     ld [RNG+1], a
 
