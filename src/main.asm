@@ -47,6 +47,7 @@ SECTION "Game Code",ROM0[$0150]
 main:
     ld sp, $FFFF
     call init
+
 .loop:
     halt
     nop ; need a nop after halt because of a bug in the gb hardware

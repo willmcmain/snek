@@ -42,9 +42,9 @@ snek_init::
     ld [SnekMvCounter], a
 
     ld a, 3
-    ld [SnekPosArrayLen], a
+    ld [SnekSegmentArrayLen], a
 
-    ld hl, SnekPosArray
+    ld hl, SnekSegmentArray
     ; Segment 0
     ld a, SNEK_START_X
     ld [hl+], a
@@ -67,7 +67,7 @@ snek_init::
     ld [hl+], a
 
     call random_apple_pos
-    ; Intentionally fall through to call snek_vblank
+    jr snek_vblank
 
 
 ;#######################################################################################
@@ -75,24 +75,25 @@ snek_init::
 ;
 ; call once during each vblank
 snek_vblank::
-    ld a, [SnekPosArrayLen]
+    ld a, [SnekSegmentArrayLen]
     ld b, a
     ld c, 0
 
 .loop_segments
     push bc ; b = arraylen, c = counter
     ld b, 0
-    ld hl, SnekPosArray
+    ld hl, SnekSegmentArray
     ; add index * 2 for segment size
     add hl, bc
     add hl, bc
 
     ; load the x,y value of the segment into d, e
-    ; add 1 to each because the position does not count the border tiles
+    ; add 1 to x and 2 to y because the position does not count the border tiles
     ld a, [hl+]
     inc a
     ld d, a
     ld e, [hl]
+    inc e
     inc e
 
     ; multiply y by 32 and add to the tile map address
@@ -168,25 +169,37 @@ snek_update::
     cp a, b
     ret nz
 
-    call random_apple_pos
-
     ; reset counter
     ld a, 0
     ld [SnekMvCounter], a
 
     call shift_segments
-    ; grow snake
-    ; ld a, [SnekPosArrayLen]
-    ; inc a
-    ; ld [SnekPosArrayLen], a
-
     call set_next_pos
 
+    ; check if we hit the apple
+    ld a, [SnekPosX]
+    ld b, a
+    ld a, [ApplePosX]
+    cp b
+    jr nz, .next
+    ld a, [SnekPosY]
+    ld b, a
+    ld a, [ApplePosY]
+    cp b
+    jr nz, .next
+
+    call random_apple_pos
+    ; grow snake
+    ld a, [SnekSegmentArrayLen]
+    inc a
+    ld [SnekSegmentArrayLen], a
+
+.next
     ; create new segment at beginning
     ld a, [SnekPosX]
-    ld [SnekPosArray], a
+    ld [SnekSegmentArray], a
     ld a, [SnekPosY]
-    ld [SnekPosArray+1], a
+    ld [SnekSegmentArray+1], a
     ret
 
 
@@ -278,10 +291,10 @@ set_next_pos:
 ;#######################################################################################
 shift_segments:
     ; copy snake segments one segment later
-    ld hl, SnekPosArray
-    ld de, SnekPosArray+SNEK_SEGMENT_SIZE
+    ld hl, SnekSegmentArray
+    ld de, SnekSegmentArray+SNEK_SEGMENT_SIZE
     ld b, 0
-    ld a, [SnekPosArrayLen]
+    ld a, [SnekSegmentArrayLen]
     ld c, a
     ; multiply bytes by SNEK_SEGMENT_SIZE (=2)
     sla c

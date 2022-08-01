@@ -1,6 +1,12 @@
 SECTION "Util Code", ROM0
+
+;#######################################################################################
+; advance the RNG value
+; the RNG is a 2-byte seed value stored in memory. Call this each time you need a new
+; random value
+;#######################################################################################
 advance_rng::
-    ; Advance the rng seed s by calculating: 75 * s + 74
+    ; Advance the rng seed s by calculating: 75 * s + 75
     ld a, [RNG]
     ld h, a
     ld a, [RNG+1]
@@ -22,7 +28,7 @@ advance_rng::
     add hl, bc ; + 3x
 
     ld d, 0
-    ld e, 74
+    ld e, 75
     add hl, de
     ld a, h
     ld [RNG], a
