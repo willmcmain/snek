@@ -3,9 +3,13 @@ ApplePosX::
     DS 1
 ApplePosY::
     DS 1
+AppleCount::
+    DS 1
 IsVblank::
     DS 1
 RNG::
+    DS 2
+Score::
     DS 2
 SceneUpdate::
     DS 2

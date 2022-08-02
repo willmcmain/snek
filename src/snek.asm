@@ -66,6 +66,11 @@ snek_init::
     ld a, SNEK_START_Y + 3
     ld [hl+], a
 
+    ld a, 0
+    ld [Score], a
+    ld [Score+1], a
+    ld [AppleCount], a
+
     call random_apple_pos
     jr snek_vblank
 
@@ -193,6 +198,21 @@ snek_update::
     ld a, [SnekSegmentArrayLen]
     inc a
     ld [SnekSegmentArrayLen], a
+    ; update score
+    ld a, [Score]
+    ld h, a
+    ld a, [Score+1]
+    ld l, a
+    ld a, [AppleCount]
+    inc a
+    ld [AppleCount], a
+    ld d, 0
+    ld e, a
+    add hl, de
+    ld a, h
+    ld [Score], a
+    ld a, l
+    ld [Score+1], a
 
 .next
     ; create new segment at beginning
