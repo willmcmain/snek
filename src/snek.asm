@@ -71,6 +71,14 @@ snek_init::
     ld [Score+1], a
     ld [AppleCount], a
 
+    ld a, $07
+    ld hl, TILE_MAP_0
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl], a
+
     call random_apple_pos
     jr snek_vblank
 

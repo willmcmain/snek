@@ -163,40 +163,11 @@ stop_lcd:
 
 
 load_tiledata:
-    ld hl, EMPTY_TILE
+    ld hl, TILE_DATA
     ld de, TILE_BLOCK_0
-    ld c, 16
-    call memcpy8
+    ld bc, TILE_DATA_END-TILE_DATA
+    call memcpy16
 
-    ld hl, GRASS_TILE
-    ld de, TILE_BLOCK_0 + $10
-    ld c, 16
-    call memcpy8
-
-    ld hl, BLOCK_TILE
-    ld de, TILE_BLOCK_0 + $20
-    ld c, 16
-    call memcpy8
-
-    ld hl, HEAD_TILE_UP
-    ld de, TILE_BLOCK_0 + $30
-    ld c, 16
-    call memcpy8
-
-    ld hl, HEAD_TILE_RIGHT
-    ld de, TILE_BLOCK_0 + $40
-    ld c, 16
-    call memcpy8
-
-    ld hl, SEGMENT_TILE
-    ld de, TILE_BLOCK_0 + $50
-    ld c, 16
-    call memcpy8
-
-    ld hl, APPLE_TILE
-    ld de, TILE_BLOCK_0 + $60
-    ld c, 16
-    call memcpy8
 
 load_bgdata:
     ld a, $00
