@@ -165,8 +165,69 @@ snek_vblank::
     add hl, de
     
     ld [hl], $06
+
+    call render_score
     ret
 
+
+macro TILE_INDEX
+
+endm
+render_score:
+    ; To render the score tiles, we need to get each decimal digit; each time we
+    ; divide the score by 10 we get the lowest digit as the remainder, we then use that
+    ; as the index of the number tile and write that to to the tile map
+    ld a, [Score]
+    ld h, a
+    ld a, [Score+1]
+    ld l, a
+    ld c, 10
+
+    call divide
+    add (ZERO_TILE - TILE_DATA) / 16
+    ld [TILE_MAP_0+4], a
+
+    call divide
+    add (ZERO_TILE - TILE_DATA) / 16
+    ld [TILE_MAP_0+3], a
+
+    call divide
+    add (ZERO_TILE - TILE_DATA) / 16
+    ld [TILE_MAP_0+2], a
+
+    call divide
+    add (ZERO_TILE - TILE_DATA) / 16
+    ld [TILE_MAP_0+1], a
+
+    call divide
+    add (ZERO_TILE - TILE_DATA) / 16
+    ld [TILE_MAP_0], a
+    ret
+
+
+divide:
+;Inputs:
+;     HL is the numerator
+;     C is the denominator
+;Outputs:
+;     A is the remainder
+;     B is 0
+;     C is not changed
+;     DE is not changed
+;     HL is the quotient
+    ld b, 16
+    xor a
+.loop
+    add hl, hl
+    rla
+    cp c
+    jr c, .end
+    inc l
+    sub c
+.end
+    dec b
+    jr nz, .loop
+    ret
 
 ;#######################################################################################
 ; update snek each frame
@@ -215,7 +276,8 @@ snek_update::
     inc a
     ld [AppleCount], a
     ld d, 0
-    ld e, a
+    ; ld e, a
+    ld e, 1
     add hl, de
     ld a, h
     ld [Score], a
