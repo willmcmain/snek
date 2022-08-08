@@ -96,7 +96,7 @@ init:
     call load_tiledata
     call load_bgdata
     call snek_init
-    ; call init_sprite
+
     ; zero out OAM
     ld a, $00
     ld hl, OAM_START

@@ -80,7 +80,8 @@ snek_init::
     ld [hl], a
 
     call random_apple_pos
-    jr snek_vblank
+    call render_snek
+    ret
 
 
 ;#######################################################################################
@@ -88,6 +89,50 @@ snek_init::
 ;
 ; call once during each vblank
 snek_vblank::
+    ; draw the first segment
+    ld hl, SnekSegmentArray
+    ld a, [hl+]
+    ld b, a
+    ld a, [hl]
+    ld c, a
+    call get_tile_map_coordinates
+    ld [hl], $05
+
+    ; delete the last tile
+    ld hl, SnekSegmentArray
+    ld a, [SnekSegmentArrayLen]
+    ld b, 0
+    ld c, a
+    add hl, bc
+    add hl, bc
+    ld a, [hl+]
+    ld b, a
+    ld a, [hl]
+    ld c, a
+    call get_tile_map_coordinates
+    ld [hl], $00
+
+    ; draw the apple
+    ; x, y position into b, c
+    ld a, [ApplePosX]
+    ; inc a
+    ld b, a
+    ld a, [ApplePosY]
+    ; add a, 2
+    ld c, a
+    call get_tile_map_coordinates
+
+    ld [hl], $06
+
+    call render_score
+    ret
+
+
+;#######################################################################################
+; load snake tiles into VRAM each frame
+;
+; call once during each vblank
+render_snek::
     ld a, [SnekSegmentArrayLen]
     ld b, a
     ld c, 0
@@ -103,27 +148,10 @@ snek_vblank::
     ; load the x,y value of the segment into d, e
     ; add 1 to x and 2 to y because the position does not count the border tiles
     ld a, [hl+]
-    inc a
-    ld d, a
-    ld e, [hl]
-    inc e
-    inc e
+    ld b, a
+    ld c, [hl]
 
-    ; multiply y by 32 and add to the tile map address
-    ld h, 0
-    ld l, e
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    ld bc, TILE_MAP_0
-    add hl, bc
-
-    ; add x to tile map address
-    ld b, $00
-    ld c, d
-    add hl, bc
+    call get_tile_map_coordinates
 
     ; if this is the final segment, jump to the end
     pop bc
@@ -136,43 +164,12 @@ snek_vblank::
     inc c
     jr .loop_segments
 .end
-    ; empty the final segment
-    ld [hl], $00
-
-    ; draw the apple
-    ; x, y position into b, c
-    ld a, [ApplePosX]
-    inc a
-    ld b, a
-    ld a, [ApplePosY]
-    add a, 2
-    ld c, a
-
-    ; multiply y by 32
-    ld h, 0
-    ld l, c
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    ; then add x
-    ld d, 0
-    ld e, b
-    add hl, de
-    ; and add to the tile map address
-    ld de, TILE_MAP_0
-    add hl, de
-    
-    ld [hl], $06
-
-    call render_score
     ret
 
 
-macro TILE_INDEX
+;#######################################################################################
 
-endm
+
 render_score:
     ; To render the score tiles, we need to get each decimal digit; each time we
     ; divide the score by 10 we get the lowest digit as the remainder, we then use that
@@ -204,30 +201,6 @@ render_score:
     ld [TILE_MAP_0], a
     ret
 
-
-divide:
-;Inputs:
-;     HL is the numerator
-;     C is the denominator
-;Outputs:
-;     A is the remainder
-;     B is 0
-;     C is not changed
-;     DE is not changed
-;     HL is the quotient
-    ld b, 16
-    xor a
-.loop
-    add hl, hl
-    rla
-    cp c
-    jr c, .end
-    inc l
-    sub c
-.end
-    dec b
-    jr nz, .loop
-    ret
 
 ;#######################################################################################
 ; update snek each frame
@@ -276,8 +249,7 @@ snek_update::
     inc a
     ld [AppleCount], a
     ld d, 0
-    ; ld e, a
-    ld e, 1
+    ld e, a
     add hl, de
     ld a, h
     ld [Score], a
@@ -429,6 +401,8 @@ random_apple_pos:
     add hl, de
     ; take h by itself == hl / 256
     ld a, h
+    ; add 1 to keep it inside the play area
+    inc a
     ld [ApplePosX], a
 
     ; random number from 0 to 14
@@ -450,5 +424,7 @@ random_apple_pos:
     add hl, de
     ; take h by itself == hl / 256
     ld a, h
+    ; add 2 to keep it inside the play area
+    add a, 2
     ld [ApplePosY], a
     ret

@@ -1,3 +1,5 @@
+INCLUDE "src/hw.inc"
+
 SECTION "Util Code", ROM0
 
 ;#######################################################################################
@@ -34,4 +36,52 @@ advance_rng::
     ld [RNG], a
     ld a, l
     ld [RNG+1], a
+    ret
+
+
+;#######################################################################################
+; divide hl by c
+;
+; Args:
+; * hl: numerator
+; * c: denominator
+; Returns:
+; * hl: quotient
+; * a: remainder
+; * c: unchanged
+;#######################################################################################
+divide::
+    ld b, 16
+    xor a
+.loop
+    add hl, hl
+    rla
+    cp c
+    jr c, .end
+    inc l
+    sub c
+.end
+    dec b
+    jr nz, .loop
+    ret
+
+
+;#######################################################################################
+;#######################################################################################
+get_tile_map_coordinates::
+    ; multiply y by 32 and add to the tile map address
+    ld h, 0
+    ld l, c
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    add hl, hl
+    ld de, TILE_MAP_0
+    add hl, de
+
+    ; add x to tile map address
+    ld d, $00
+    ld e, b
+    add hl, de
     ret
