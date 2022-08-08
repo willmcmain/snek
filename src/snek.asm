@@ -17,9 +17,6 @@ BUTTON_B      EQU $20
 BUTTON_SELECT EQU $40
 BUTTON_START  EQU $80
 
-; number of frames between each snek movement
-SNEK_MOVEMENT EQU 20
-
 SECTION "Snek Code", ROM0
 ;#######################################################################################
 ; initialize snek data
@@ -40,6 +37,8 @@ snek_init::
     ld [SnekPosY], a
     ld a, 0
     ld [SnekMvCounter], a
+    ld a, 20
+    ld [SnekMvSpeed], a
 
     ld a, 3
     ld [SnekSegmentArrayLen], a
@@ -212,7 +211,9 @@ snek_update::
     ld a, [SnekMvCounter]
     inc a
     ld [SnekMvCounter], a
-    ld b, SNEK_MOVEMENT
+    ld b, a
+
+    ld a, [SnekMvSpeed]
     cp a, b
     ret nz
 
@@ -235,19 +236,33 @@ snek_update::
     cp b
     jr nz, .next
 
+    ; we grabbed an apple
     call random_apple_pos
     ; grow snake
     ld a, [SnekSegmentArrayLen]
     inc a
     ld [SnekSegmentArrayLen], a
+
+    ; update apple count
+    ld a, [AppleCount]
+    inc a
+    ld [AppleCount], a
+    ; every 4 apples, we increase the speed of the snek
+    and a, %00000011
+    jr nz, .end_speed_up
+    ld a, [SnekMvSpeed]
+    cp a, 2
+    jr z, .end_speed_up
+    dec a
+    ld [SnekMvSpeed], a
+.end_speed_up
+
     ; update score
     ld a, [Score]
     ld h, a
     ld a, [Score+1]
     ld l, a
     ld a, [AppleCount]
-    inc a
-    ld [AppleCount], a
     ld d, 0
     ld e, a
     add hl, de
