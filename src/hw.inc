@@ -66,4 +66,12 @@ OAM_END EQU $FEA0
 HRAM_START EQU $FF80
 HRAM_END EQU $FFFF
 
+MACRO SetSceneUpdate
+    ld hl, \1
+    ld a, h
+    ld [SceneUpdate], a
+    ld a, l
+    ld [SceneUpdate+1], a
+ENDM
+
 ENDC

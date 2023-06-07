@@ -21,11 +21,7 @@ SECTION "Snek Code", ROM0
 ;#######################################################################################
 ; initialize snek data
 snek_init::
-    ld hl, snek_update
-    ld a, h
-    ld [SceneUpdate], a
-    ld a, l
-    ld [SceneUpdate+1], a
+    SetSceneUpdate snek_update
 
     ld a, SNEK_FACE_UP
     ld [SnekFace], a
@@ -37,7 +33,7 @@ snek_init::
     ld [SnekPosY], a
     ld a, 0
     ld [SnekMvCounter], a
-    ld a, 20
+    ld a, 15
     ld [SnekMvSpeed], a
 
     ld a, 3
@@ -70,16 +66,13 @@ snek_init::
     ld [Score+1], a
     ld [AppleCount], a
 
-    ld a, $07
-    ld hl, TILE_MAP_0
-    ld [hl+], a
-    ld [hl+], a
-    ld [hl+], a
-    ld [hl+], a
-    ld [hl], a
+    ld a, 3
+    ld [Lives], a
 
     call random_apple_pos
     call render_snek
+    call render_score
+    call render_lives
     ret
 
 
@@ -123,14 +116,34 @@ snek_vblank::
 
     ld [hl], $06
 
+    ; set lives display tiles
+    ld hl, LivesDisplay
+    ld a, [hl+]
+    ld [TILE_MAP_0+18], a
+    ld a, [hl]
+    ld [TILE_MAP_0+19], a
+
+    ; set score display tiles
+    ld hl, ScoreDisplay
+    ld a, [hl+]
+    ld [TILE_MAP_0], a
+    ld a, [hl+]
+    ld [TILE_MAP_0+1], a
+    ld a, [hl+]
+    ld [TILE_MAP_0+2], a
+    ld a, [hl+]
+    ld [TILE_MAP_0+3], a
+    ld a, [hl]
+    ld [TILE_MAP_0+4], a
+
     call render_score
     ret
 
 
 ;#######################################################################################
-; load snake tiles into VRAM each frame
+; load snake tiles into VRAM
 ;
-; call once during each vblank
+; call at beginning to set up snek
 render_snek::
     ld a, [SnekSegmentArrayLen]
     ld b, a
@@ -144,7 +157,7 @@ render_snek::
     add hl, bc
     add hl, bc
 
-    ; load the x,y value of the segment into d, e
+    ; load the x,y value of the segment into b,c
     ; add 1 to x and 2 to y because the position does not count the border tiles
     ld a, [hl+]
     ld b, a
@@ -181,25 +194,41 @@ render_score:
 
     call divide
     add (ZERO_TILE - TILE_DATA) / 16
-    ld [TILE_MAP_0+4], a
+    ld [ScoreDisplay+4], a
 
     call divide
     add (ZERO_TILE - TILE_DATA) / 16
-    ld [TILE_MAP_0+3], a
+    ld [ScoreDisplay+3], a
 
     call divide
     add (ZERO_TILE - TILE_DATA) / 16
-    ld [TILE_MAP_0+2], a
+    ld [ScoreDisplay+2], a
 
     call divide
     add (ZERO_TILE - TILE_DATA) / 16
-    ld [TILE_MAP_0+1], a
+    ld [ScoreDisplay+1], a
 
     call divide
     add (ZERO_TILE - TILE_DATA) / 16
-    ld [TILE_MAP_0], a
+    ld [ScoreDisplay], a
     ret
 
+
+render_lives:
+    ld a, $00
+    ld h, a
+    ld a, [Lives]
+    ld l, a
+    ld c, 10
+
+    call divide
+    add (ZERO_TILE - TILE_DATA) / 16
+    ld [LivesDisplay+1], a
+
+    call divide
+    add (ZERO_TILE - TILE_DATA) / 16
+    ld [LivesDisplay], a
+    ret
 
 ;#######################################################################################
 ; update snek each frame
@@ -257,6 +286,19 @@ snek_update::
     ld [SnekMvSpeed], a
 .end_speed_up
 
+    ; every 8 apples, gain another life (max 99)
+    ld a, [AppleCount]
+    and a, %00000111
+    jr nz, .end_life_up
+    ld a, [Lives]
+    cp a, 99
+    jr z, .end_life_up
+    inc a
+    ld [Lives], a
+    call render_lives
+.end_life_up
+
+
     ; update score
     ld a, [Score]
     ld h, a
@@ -270,6 +312,7 @@ snek_update::
     ld [Score], a
     ld a, l
     ld [Score+1], a
+    call render_score
 
 .next
     ; create new segment at beginning

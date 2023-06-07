@@ -7,10 +7,16 @@ AppleCount::
     DS 1
 IsVblank::
     DS 1
+Lives::
+    DS 1
+LivesDisplay::
+    DS 2
 RNG::
     DS 2
 Score::
     DS 2
+ScoreDisplay::
+    DS 5
 SceneUpdate::
     DS 2
 SnekFace:: ; 0 = up, 1 = right, 2 = down, 3 = left
@@ -36,8 +42,6 @@ SnekSegmentArray::
 SnekSegmentArrayLen::
     DS 1
 UserInput::
-    DS 1
-WallCollision::
     DS 1
 
 
