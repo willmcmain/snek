@@ -1,3 +1,5 @@
+INCLUDE "src/constants.inc"
+
 SECTION "System RAM",WRAM0[$C000]
 ApplePosX::
     DS 1
@@ -37,7 +39,7 @@ SnekPosY::
 ; 0 <= x <= 18
 ; 0 <= y <= 16
 SnekSegmentArray::
-    DS 2 * 256
+    DS SNEK_SEGMENT_SIZE * 256
 ; The number of current segments
 SnekSegmentArrayLen::
     DS 1

@@ -1,21 +1,5 @@
 INCLUDE "src/hw.inc"
-SNEK_START_X EQU 9
-SNEK_START_Y EQU 8
-SNEK_SEGMENT_SIZE EQU 2
-
-SNEK_FACE_UP EQU 0
-SNEK_FACE_RIGHT EQU 1
-SNEK_FACE_DOWN EQU 2
-SNEK_FACE_LEFT EQU 3
-
-BUTTON_RIGHT  EQU $01
-BUTTON_LEFT   EQU $02
-BUTTON_UP     EQU $04
-BUTTON_DOWN   EQU $08
-BUTTON_A      EQU $10
-BUTTON_B      EQU $20
-BUTTON_SELECT EQU $40
-BUTTON_START  EQU $80
+INCLUDE "src/constants.inc"
 
 SECTION "Snek Code", ROM0
 ;#######################################################################################
