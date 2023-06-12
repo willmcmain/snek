@@ -4,6 +4,12 @@ BUILD_DIR=build
 
 mkdir -p $BUILD_DIR
 
+for f in gfx/*.png; do
+    echo "Converting $f ..."
+    file=$(basename "$f" .png)
+    rgbgfx gfx/$file.png -o $BUILD_DIR/$file.bin -c#fff,#aaa,#555,#000
+done
+
 for f in src/*.asm; do
     echo "Assembling $f ..."
     file=$(basename "$f" .asm)
