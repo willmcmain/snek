@@ -469,4 +469,35 @@ random_apple_pos:
     ; add 2 to keep it inside the play area
     add a, 2
     ld [ApplePosY], a
+
+    ; if the apple was randomly placed on a snake tile, rerandomize
+    call check_apple_overlaps_snek
+    or a
+    jr nz, random_apple_pos
+    ret
+
+check_apple_overlaps_snek:
+    ld a, [SnekSegmentArrayLen]
+    ld d, a
+    inc d
+    ld hl, SnekSegmentArray
+
+.loop
+    dec d
+    jr z, .no_match
+
+    ld a, [hl+]
+    ld b, a
+    ld a, [hl+]
+    ld c, a
+    ld a, [ApplePosX]
+    cp b
+    jr nz, .loop
+    ld a, [ApplePosY]
+    cp c
+    jr nz, .loop
+    ld a, 1 ; match
+    ret
+.no_match
+    ld a, 0
     ret

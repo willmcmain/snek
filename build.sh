@@ -20,6 +20,6 @@ echo "Linking..."
 rgblink \
     -m $BUILD_DIR/snek.map \
     -n $BUILD_DIR/snek.sym \
-    -o ./snek.gb \
+    -o $BUILD_DIR/snek.gb \
     $BUILD_DIR/*.o
-rgbfix -v -p 0 ./snek.gb
+rgbfix -v -p 0 $BUILD_DIR/snek.gb

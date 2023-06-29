@@ -36,8 +36,8 @@ SnekPosY::
 ; Array of snek segments
 ; Each segment is two bytes representing the x, y coordinate
 ; of the segment.
-; 0 <= x <= 18
-; 0 <= y <= 16
+; 0 <= x < 18
+; 0 <= y < 15
 SnekSegmentArray::
     DS SNEK_SEGMENT_SIZE * 256
 ; The number of current segments
