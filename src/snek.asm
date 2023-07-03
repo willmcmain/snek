@@ -72,7 +72,7 @@ snek_vblank::
     ld a, [hl]
     ld c, a
     call get_tile_map_coordinates
-    ld [hl], $05
+    ld [hl], SEGMENT_TILE
 
     ; delete the last tile
     ld hl, SnekSegmentArray
@@ -86,7 +86,7 @@ snek_vblank::
     ld a, [hl]
     ld c, a
     call get_tile_map_coordinates
-    ld [hl], $00
+    ld [hl], EMPTY_TILE
 
     ; draw the apple
     ; x, y position into b, c
@@ -98,7 +98,7 @@ snek_vblank::
     ld c, a
     call get_tile_map_coordinates
 
-    ld [hl], $06
+    ld [hl], APPLE_TILE
 
     ; set lives display tiles
     ld hl, LivesDisplay
@@ -156,7 +156,7 @@ render_snek::
     jr z, .end
 
     ; load snek segment tile and loop
-    ld [hl], $05
+    ld [hl], SEGMENT_TILE
     inc c
     jr .loop_segments
 .end
@@ -177,23 +177,23 @@ render_score:
     ld c, 10
 
     call divide
-    add (ZERO_TILE - TILE_DATA) / 16
+    add ZERO_TILE
     ld [ScoreDisplay+4], a
 
     call divide
-    add (ZERO_TILE - TILE_DATA) / 16
+    add ZERO_TILE
     ld [ScoreDisplay+3], a
 
     call divide
-    add (ZERO_TILE - TILE_DATA) / 16
+    add ZERO_TILE
     ld [ScoreDisplay+2], a
 
     call divide
-    add (ZERO_TILE - TILE_DATA) / 16
+    add ZERO_TILE
     ld [ScoreDisplay+1], a
 
     call divide
-    add (ZERO_TILE - TILE_DATA) / 16
+    add ZERO_TILE
     ld [ScoreDisplay], a
     ret
 
@@ -206,11 +206,11 @@ render_lives:
     ld c, 10
 
     call divide
-    add (ZERO_TILE - TILE_DATA) / 16
+    add ZERO_TILE
     ld [LivesDisplay+1], a
 
     call divide
-    add (ZERO_TILE - TILE_DATA) / 16
+    add ZERO_TILE
     ld [LivesDisplay], a
     ret
 

@@ -1,5 +1,6 @@
 ; Snek!
 INCLUDE "src/hw.inc"
+INCLUDE "src/constants.inc"
 
 ; Interrupts
 SECTION "Vertical Blank IRQ",ROM0[$0040]
@@ -170,25 +171,25 @@ load_tiledata:
 
 
 load_bgdata:
-    ld a, $00
+    ld a, EMPTY_TILE
     ld hl, TILE_MAP_0
     ld bc, 32 * 18
     call memset16
 
     ; top
-    ld a, $02
+    ld a, BLOCK_TILE
     ld hl, TILE_MAP_0 + 32
     ld c, 20
     call memset8
 
     ; bottom
-    ld a, $02
+    ld a, BLOCK_TILE
     ld hl, TILE_MAP_0 + 32 * 17
     ld c, 20
     call memset8
 
     ; sides
-    ld c, $02
+    ld c, BLOCK_TILE
     ld b, 15
     ld hl, TILE_MAP_0 + 32 * 2
 .loop
