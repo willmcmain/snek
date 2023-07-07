@@ -72,11 +72,9 @@ get_tile_map_coordinates::
     ; multiply y by 32 and add to the tile map address
     ld h, 0
     ld l, c
+REPT 5
     add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
-    add hl, hl
+ENDR
     ld de, TILE_MAP_0
     add hl, de
 

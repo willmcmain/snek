@@ -3,7 +3,7 @@ INCLUDE "src/constants.inc"
 
 SECTION "Snek Code", ROM0
 ;#######################################################################################
-; initialize snek data
+; Initialize the scene
 snek_init::
     SetSceneUpdate snek_update
 
@@ -45,16 +45,16 @@ snek_init::
     ld a, SNEK_START_Y + 3
     ld [hl+], a
 
+    call init_snek_tiles
+
     ld a, 0
+    ld [Collision], a
     ld [Score], a
     ld [Score+1], a
     ld [AppleCount], a
-
     ld a, 3
     ld [Lives], a
-
     call random_apple_pos
-    call render_snek
     call render_score
     call render_lives
     ret
@@ -65,15 +65,6 @@ snek_init::
 ;
 ; call once during each vblank
 snek_vblank::
-    ; draw the first segment
-    ld hl, SnekSegmentArray
-    ld a, [hl+]
-    ld b, a
-    ld a, [hl]
-    ld c, a
-    call get_tile_map_coordinates
-    ld [hl], SEGMENT_TILE
-
     ; delete the last tile
     ld hl, SnekSegmentArray
     ld a, [SnekSegmentArrayLen]
@@ -87,6 +78,15 @@ snek_vblank::
     ld c, a
     call get_tile_map_coordinates
     ld [hl], EMPTY_TILE
+
+    ; draw the first segment
+    ld hl, SnekSegmentArray
+    ld a, [hl+]
+    ld b, a
+    ld a, [hl]
+    ld c, a
+    call get_tile_map_coordinates
+    ld [hl], SEGMENT_TILE
 
     ; draw the apple
     ; x, y position into b, c
@@ -120,99 +120,10 @@ snek_vblank::
     ld a, [hl]
     ld [TILE_MAP_0+4], a
 
-    call render_score
+    ; call render_score
     ret
 
 
-;#######################################################################################
-; load snake tiles into VRAM
-;
-; call at beginning to set up snek
-render_snek::
-    ld a, [SnekSegmentArrayLen]
-    ld b, a
-    ld c, 0
-
-.loop_segments
-    push bc ; b = arraylen, c = counter
-    ld b, 0
-    ld hl, SnekSegmentArray
-    ; add index * 2 for segment size
-    add hl, bc
-    add hl, bc
-
-    ; load the x,y value of the segment into b,c
-    ; add 1 to x and 2 to y because the position does not count the border tiles
-    ld a, [hl+]
-    ld b, a
-    ld c, [hl]
-
-    call get_tile_map_coordinates
-
-    ; if this is the final segment, jump to the end
-    pop bc
-    ld a, b
-    cp a, c
-    jr z, .end
-
-    ; load snek segment tile and loop
-    ld [hl], SEGMENT_TILE
-    inc c
-    jr .loop_segments
-.end
-    ret
-
-
-;#######################################################################################
-
-
-render_score:
-    ; To render the score tiles, we need to get each decimal digit; each time we
-    ; divide the score by 10 we get the lowest digit as the remainder, we then use that
-    ; as the index of the number tile and write that to to the tile map
-    ld a, [Score]
-    ld h, a
-    ld a, [Score+1]
-    ld l, a
-    ld c, 10
-
-    call divide
-    add ZERO_TILE
-    ld [ScoreDisplay+4], a
-
-    call divide
-    add ZERO_TILE
-    ld [ScoreDisplay+3], a
-
-    call divide
-    add ZERO_TILE
-    ld [ScoreDisplay+2], a
-
-    call divide
-    add ZERO_TILE
-    ld [ScoreDisplay+1], a
-
-    call divide
-    add ZERO_TILE
-    ld [ScoreDisplay], a
-    ret
-
-
-render_lives:
-    ld a, $00
-    ld h, a
-    ld a, [Lives]
-    ld l, a
-    ld c, 10
-
-    call divide
-    add ZERO_TILE
-    ld [LivesDisplay+1], a
-
-    call divide
-    add ZERO_TILE
-    ld [LivesDisplay], a
-    ret
 
 ;#######################################################################################
 ; update snek each frame
@@ -234,8 +145,9 @@ snek_update::
     ld a, 0
     ld [SnekMvCounter], a
 
-    call shift_segments
     call set_next_pos
+    call shift_segments
+    call check_collision
 
     ; check if we hit the apple
     ld a, [SnekPosX]
@@ -299,16 +211,111 @@ snek_update::
     call render_score
 
 .next
-    ; create new segment at beginning
-    ld a, [SnekPosX]
-    ld [SnekSegmentArray], a
-    ld a, [SnekPosY]
-    ld [SnekSegmentArray+1], a
+    ret
+
+;#######################################################################################
+; load snek tiles on scene init
+init_snek_tiles:
+    ld a, [SnekSegmentArrayLen]
+    ld b, a
+    ld c, 0
+
+.loop_segments
+    push bc ; b = arraylen, c = counter
+    ld b, 0
+    ld hl, SnekSegmentArray
+    ; add index * 2 for segment size
+    add hl, bc
+    add hl, bc
+
+    ; load the x,y value of the segment into b,c
+    ; add 1 to x and 2 to y because the position does not count the border tiles
+    ld a, [hl+]
+    ld b, a
+    ld c, [hl]
+
+    call get_tile_map_coordinates
+
+    ; if this is the final segment, jump to the end
+    pop bc
+    ld a, b
+    cp a, c
+    jr z, .end
+
+    ; load snek segment tile and loop
+    ld [hl], SEGMENT_TILE
+    inc c
+    jr .loop_segments
+.end
     ret
 
 
 ;#######################################################################################
+; convert the score to decimal and set the digit tiles in memory
+; tiles are kept in memory then copied to VRAM by the snek_vblank subroutine
+render_score:
+    ; To render the score tiles, we need to get each decimal digit; each time we
+    ; divide the score by 10 we get the lowest digit as the remainder, we then use that
+    ; as the index of the number tile and write that to to the tile map
+    ld a, [Score]
+    ld h, a
+    ld a, [Score+1]
+    ld l, a
+    ld c, 10
+
+    call divide
+    add ZERO_TILE
+    ld [ScoreDisplay+4], a
+
+    call divide
+    add ZERO_TILE
+    ld [ScoreDisplay+3], a
+
+    call divide
+    add ZERO_TILE
+    ld [ScoreDisplay+2], a
+
+    call divide
+    add ZERO_TILE
+    ld [ScoreDisplay+1], a
+
+    call divide
+    add ZERO_TILE
+    ld [ScoreDisplay], a
+    ret
+
+
+;#######################################################################################
+; convert the # of lives to decimal and set the digit tiles in memory
+; tiles are kept in memory then copied to VRAM by the snek_vblank subroutine
+render_lives:
+    ld a, $00
+    ld h, a
+    ld a, [Lives]
+    ld l, a
+    ld c, 10
+
+    call divide
+    add ZERO_TILE
+    ld [LivesDisplay+1], a
+
+    call divide
+    add ZERO_TILE
+    ld [LivesDisplay], a
+    ret
+
+;#######################################################################################
 set_direction:
+; for each direction, we check if we're going the opposite direction before setting
+; the new direction
+MACRO SetDirection
+    ld a, [SnekFace]
+    cp \2
+    ret z
+    ld a, \1
+    ld [SnekNextFace], a
+    ret
+ENDM
     ; check for button direction
     ld a, [UserInput]
     ld b, a
@@ -317,51 +324,29 @@ set_direction:
 
     ld a, b
     and BUTTON_RIGHT
-    jr nz, .right
+    jr z, .right
+    SetDirection SNEK_FACE_RIGHT, SNEK_FACE_LEFT
+.right
 
     ld a, b
     and BUTTON_LEFT
-    jr nz, .left
+    jr z, .left
+    SetDirection SNEK_FACE_LEFT, SNEK_FACE_RIGHT
+.left
 
     ld a, b
     and BUTTON_DOWN
-    jr nz, .down
+    jr z, .down
+    SetDirection SNEK_FACE_DOWN, SNEK_FACE_UP
+.down
 
     ld a, b
     and BUTTON_UP
-    jr nz, .up
+    jr z, .up
+    SetDirection SNEK_FACE_UP, SNEK_FACE_DOWN
+.up
     ret
 
-; for each direction, we check if we're going the opposite direction before setting
-; the new direction
-.up
-    ld a, [SnekFace]
-    cp SNEK_FACE_DOWN
-    ret z
-    ld a, SNEK_FACE_UP
-    ld [SnekNextFace], a
-    ret
-.right
-    ld a, [SnekFace]
-    cp SNEK_FACE_LEFT
-    ret z
-    ld a, SNEK_FACE_RIGHT
-    ld [SnekNextFace], a
-    ret
-.down
-    ld a, [SnekFace]
-    cp SNEK_FACE_UP
-    ret z
-    ld a, SNEK_FACE_DOWN
-    ld [SnekNextFace], a
-    ret
-.left
-    ld a, [SnekFace]
-    cp SNEK_FACE_RIGHT
-    ret z
-    ld a, SNEK_FACE_LEFT
-    ld [SnekNextFace], a
-    ret
 
 
 ;#######################################################################################
@@ -422,6 +407,12 @@ shift_segments:
     ld a, b
     or c
     jr nz, .loop
+
+    ; create new segment at beginning
+    ld a, [SnekPosX]
+    ld [SnekSegmentArray], a
+    ld a, [SnekPosY]
+    ld [SnekSegmentArray+1], a
     ret
 
 
@@ -476,6 +467,7 @@ random_apple_pos:
     jr nz, random_apple_pos
     ret
 
+;#######################################################################################
 check_apple_overlaps_snek:
     ld a, [SnekSegmentArrayLen]
     ld d, a
@@ -500,4 +492,47 @@ check_apple_overlaps_snek:
     ret
 .no_match
     ld a, 0
+    ret
+
+;#######################################################################################
+check_collision:
+    ; check if collides with walls
+    ld a, [SnekPosX]
+    or a
+    jr z, .hit
+    cp 19
+    jr z, .hit
+
+    ld a, [SnekPosY]
+    cp 1
+    jr z, .hit
+    cp 17
+    jr z, .hit
+
+    ; check if collides with any segment
+    ld a, [SnekSegmentArrayLen]
+    ld d, a
+    ld hl, SnekSegmentArray
+    ; skip the first segment since it's the same as SnekPos
+    inc hl
+    inc hl
+    dec d
+.loop
+    ld a, [hl+]
+    ld b, a
+    ld a, [hl+]
+    ld c, a
+    ld a, [SnekPosX]
+    cp b
+    jr nz, .continue
+    ld a, [SnekPosY]
+    cp c
+    jr z, .hit
+.continue
+    dec d
+    jr nz, .loop
+    ret
+.hit
+    ld a, 1
+    ld [Collision], a
     ret

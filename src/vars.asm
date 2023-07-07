@@ -7,6 +7,8 @@ ApplePosY::
     DS 1
 AppleCount::
     DS 1
+Collision::
+    DS 1
 IsVblank::
     DS 1
 Lives::
@@ -36,8 +38,8 @@ SnekPosY::
 ; Array of snek segments
 ; Each segment is two bytes representing the x, y coordinate
 ; of the segment.
-; 0 <= x < 18
-; 0 <= y < 15
+; 1 <= x <= 18
+; 2 <= y <= 16
 SnekSegmentArray::
     DS SNEK_SEGMENT_SIZE * 256
 ; The number of current segments
