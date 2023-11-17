@@ -176,6 +176,12 @@ load_bgdata:
     ld bc, 32 * 18
     call memset16
 
+    ; lives display
+    ld a, SNEK_ICON_TILE
+    ld [TILE_MAP_0+16], a
+    ld a, X_TILE
+    ld [TILE_MAP_0+17], a
+
     ; top
     ld a, BLOCK_TILE
     ld hl, TILE_MAP_0 + 32
@@ -192,6 +198,7 @@ load_bgdata:
     ld c, BLOCK_TILE
     ld b, 15
     ld hl, TILE_MAP_0 + 32 * 2
+
 .loop
     ld [hl], c
     ld de, 19

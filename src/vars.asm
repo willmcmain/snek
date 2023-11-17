@@ -31,6 +31,8 @@ SnekMvSpeed::
     DS 1
 SnekNextFace::
     DS 1
+SnekNextPos::
+    DS 2
 SnekPosX::
     DS 1
 SnekPosY::

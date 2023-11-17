@@ -120,7 +120,6 @@ snek_vblank::
     ld a, [hl]
     ld [TILE_MAP_0+4], a
 
-    ; call render_score
     ret
 
 
@@ -128,6 +127,14 @@ snek_vblank::
 ;#######################################################################################
 ; update snek each frame
 snek_update::
+    ; if we're currently dead run the dead state update instead
+    ld a, [Collision]
+    cp a, 0
+    jr z, .alive
+    call snek_dead_update
+    ret
+
+.alive
     call set_direction
 
     ; Each frame increment SnekMvCounter by one until it reaches SNEK_MOVEMENT
@@ -146,8 +153,16 @@ snek_update::
     ld [SnekMvCounter], a
 
     call set_next_pos
-    call shift_segments
+    ld a, [SnekNextPos]
+    ld [SnekPosX], a
+    ld a, [SnekNextPos+1]
+    ld [SnekPosY], a
     call check_collision
+    ld a, [Collision]
+    cp a, 0
+    ret nz
+
+    call shift_segments
 
     ; check if we hit the apple
     ld a, [SnekPosX]
@@ -211,6 +226,11 @@ snek_update::
     call render_score
 
 .next
+    ret
+
+;#######################################################################################
+; update each frame when the snek is dead
+snek_dead_update:
     ret
 
 ;#######################################################################################
@@ -351,6 +371,11 @@ ENDM
 
 ;#######################################################################################
 set_next_pos:
+    ld a, [SnekSegmentArray]
+    ld [SnekNextPos], a
+    ld a, [SnekSegmentArray+1]
+    ld [SnekNextPos+1], a
+
     ld a, [SnekNextFace]
     ld [SnekFace], a
     cp SNEK_FACE_UP
@@ -359,20 +384,20 @@ set_next_pos:
     jr z, .right
     cp SNEK_FACE_DOWN
     jr z, .down
-    ; default left, decrement x
-    ld hl, SnekPosX
+    ; default left, x-1
+    ld hl, SnekNextPos
     dec [hl]
     ret
-.up ; decrement y
-    ld hl, SnekPosY
+.up ; y-1
+    ld hl, SnekNextPos+1
     dec [hl]
     ret
-.right ; increment x
-    ld hl, SnekPosX
+.right ; x+1
+    ld hl, SnekNextPos
     inc [hl]
     ret
-.down ; increment y
-    ld hl, SnekPosY
+.down ; y+1
+    ld hl, SnekNextPos+1
     inc [hl]
     ret
 
@@ -497,13 +522,13 @@ check_apple_overlaps_snek:
 ;#######################################################################################
 check_collision:
     ; check if collides with walls
-    ld a, [SnekPosX]
+    ld a, [SnekNextPos]
     or a
     jr z, .hit
     cp 19
     jr z, .hit
 
-    ld a, [SnekPosY]
+    ld a, [SnekNextPos+1]
     cp 1
     jr z, .hit
     cp 17
@@ -513,7 +538,7 @@ check_collision:
     ld a, [SnekSegmentArrayLen]
     ld d, a
     ld hl, SnekSegmentArray
-    ; skip the first segment since it's the same as SnekPos
+    ; skip the first segment since it's the same as SnekNextPos
     inc hl
     inc hl
     dec d
@@ -522,10 +547,10 @@ check_collision:
     ld b, a
     ld a, [hl+]
     ld c, a
-    ld a, [SnekPosX]
+    ld a, [SnekNextPos]
     cp b
     jr nz, .continue
-    ld a, [SnekPosY]
+    ld a, [SnekNextPos+1]
     cp c
     jr z, .hit
 .continue
