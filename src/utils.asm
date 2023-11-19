@@ -67,6 +67,10 @@ divide::
 
 
 ;#######################################################################################
+; Args:
+; * b, c: x, y coordinates
+; Returns:
+; * hl: tile location in vram
 ;#######################################################################################
 get_tile_map_coordinates::
     ; multiply y by 32 and add to the tile map address

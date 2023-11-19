@@ -48,12 +48,16 @@ snek_init::
     call init_snek_tiles
 
     ld a, 0
-    ld [Collision], a
+    ld [Dead], a
+    ld [DeadCounter], a
+    ld [ExplosionAnimationCounter], a
     ld [Score], a
     ld [Score+1], a
     ld [AppleCount], a
     ld a, 3
     ld [Lives], a
+    ld a, EXPLOSION_TILE_0
+    ld [ExplosionTile], a
     call random_apple_pos
     call render_score
     call render_lives
@@ -65,6 +69,10 @@ snek_init::
 ;
 ; call once during each vblank
 snek_vblank::
+    ld a, [Dead]
+    cp a, 0
+    jr nz, snek_vblank_dead
+
     ; delete the last tile
     ld hl, SnekSegmentArray
     ld a, [SnekSegmentArrayLen]
@@ -122,13 +130,69 @@ snek_vblank::
 
     ret
 
+snek_vblank_dead:
+    ld a, [DeadCounter]
+    cp a, 59
+    jr nz, .expl_anim
+    ld a, EMPTY_TILE
+    ld [ExplosionTile], a
+    jr .end
+
+.expl_anim
+    ld hl, DeadCounter
+    inc [hl]
+    ld hl, ExplosionAnimationCounter
+    inc [hl]
+    ld a, [ExplosionAnimationCounter]
+    cp a, 9
+    jr nz, .end
+    ; Toggle explosion frame
+    ld a, 0
+    ld [ExplosionAnimationCounter], a
+    ld a, [ExplosionTile]
+    cp a, EXPLOSION_TILE_0
+    jr z, .expl_1
+    ld a, EXPLOSION_TILE_0
+    ld [ExplosionTile], a
+    jr .end
+.expl_1
+    ld a, EXPLOSION_TILE_1
+    ld [ExplosionTile], a
+.end
+
+
+    ld hl, SnekSegmentArray
+    ld a, [SnekSegmentArrayLen]
+    ld d, a
+.render
+    ld a, d
+    cp a, 0
+    jr z, .end_render
+    
+    ld a, [hl+]
+    ld b, a
+    ld a, [hl+]
+    ld c, a
+    push hl
+    push de
+    call get_tile_map_coordinates
+    ld a, [ExplosionTile]
+    ld [hl], a
+    pop de
+    pop hl
+
+    dec d
+    jr .render
+.end_render
+    ret
+
 
 
 ;#######################################################################################
 ; update snek each frame
 snek_update::
     ; if we're currently dead run the dead state update instead
-    ld a, [Collision]
+    ld a, [Dead]
     cp a, 0
     jr z, .alive
     call snek_dead_update
@@ -158,7 +222,7 @@ snek_update::
     ld a, [SnekNextPos+1]
     ld [SnekPosY], a
     call check_collision
-    ld a, [Collision]
+    ld a, [Dead]
     cp a, 0
     ret nz
 
@@ -559,5 +623,5 @@ check_collision:
     ret
 .hit
     ld a, 1
-    ld [Collision], a
+    ld [Dead], a
     ret

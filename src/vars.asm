@@ -7,7 +7,13 @@ ApplePosY::
     DS 1
 AppleCount::
     DS 1
-Collision::
+Dead::
+    DS 1
+DeadCounter::
+    DS 1
+ExplosionAnimationCounter::
+    DS 1
+ExplosionTile::
     DS 1
 IsVblank::
     DS 1
