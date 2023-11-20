@@ -21,7 +21,7 @@ snek_init::
     ld [SnekMvSpeed], a
 
     ld a, 3
-    ld [SnekSegmentArrayLen], a
+    ld [SnekLength], a
 
     ld hl, SnekSegmentArray
     ; Segment 0
@@ -75,7 +75,7 @@ snek_vblank::
 
     ; delete the last tile
     ld hl, SnekSegmentArray
-    ld a, [SnekSegmentArrayLen]
+    ld a, [SnekLength]
     ld b, 0
     ld c, a
     add hl, bc
@@ -162,7 +162,7 @@ snek_vblank_dead:
 
 
     ld hl, SnekSegmentArray
-    ld a, [SnekSegmentArrayLen]
+    ld a, [SnekLength]
     ld d, a
 .render
     ld a, d
@@ -243,9 +243,12 @@ snek_update::
     ; we grabbed an apple
     call random_apple_pos
     ; grow snake
-    ld a, [SnekSegmentArrayLen]
+    ld a, [SnekLength]
+    cp a, SNEK_MAX_LEN
+    jr z, .snek_max
     inc a
-    ld [SnekSegmentArrayLen], a
+    ld [SnekLength], a
+.snek_max
 
     ; update apple count
     ld a, [AppleCount]
@@ -300,7 +303,7 @@ snek_dead_update:
 ;#######################################################################################
 ; load snek tiles on scene init
 init_snek_tiles:
-    ld a, [SnekSegmentArrayLen]
+    ld a, [SnekLength]
     ld b, a
     ld c, 0
 
@@ -472,7 +475,7 @@ shift_segments:
     ld hl, SnekSegmentArray
     ld de, SnekSegmentArray+SNEK_SEGMENT_SIZE
     ld b, 0
-    ld a, [SnekSegmentArrayLen]
+    ld a, [SnekLength]
     ld c, a
     ; multiply bytes by SNEK_SEGMENT_SIZE (=2)
     sla c
@@ -558,7 +561,7 @@ random_apple_pos:
 
 ;#######################################################################################
 check_apple_overlaps_snek:
-    ld a, [SnekSegmentArrayLen]
+    ld a, [SnekLength]
     ld d, a
     inc d
     ld hl, SnekSegmentArray
@@ -599,7 +602,7 @@ check_collision:
     jr z, .hit
 
     ; check if collides with any segment
-    ld a, [SnekSegmentArrayLen]
+    ld a, [SnekLength]
     ld d, a
     ld hl, SnekSegmentArray
     ; skip the first segment since it's the same as SnekNextPos
