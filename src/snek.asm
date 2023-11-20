@@ -54,6 +54,7 @@ snek_init::
     ld [Score], a
     ld [Score+1], a
     ld [AppleCount], a
+    ld [Pause], a
     ld a, 3
     ld [Lives], a
     ld a, EXPLOSION_TILE_0
@@ -191,6 +192,12 @@ snek_vblank_dead:
 ;#######################################################################################
 ; update snek each frame
 snek_update::
+    call check_pause_button
+    ; don't do anything if we're paused
+    ld a, [Pause]
+    cp a, 0
+    ret nz
+
     ; if we're currently dead run the dead state update instead
     ld a, [Dead]
     cp a, 0
@@ -298,6 +305,26 @@ snek_update::
 ;#######################################################################################
 ; update each frame when the snek is dead
 snek_dead_update:
+    ret
+
+;#######################################################################################
+; check if pause button has been pressed and toggle pause if it has
+check_pause_button:
+    ld a, [UserInput]
+    and BUTTON_START
+    ret z
+    ld a, [LastUserInput]
+    and BUTTON_START
+    ret nz
+    ld a, [Pause]
+    cp a, 0
+    jr z, .pause
+    ld a, 0
+    ld [Pause], a
+    ret
+.pause
+    ld a, 1
+    ld [Pause], a
     ret
 
 ;#######################################################################################

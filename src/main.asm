@@ -128,6 +128,10 @@ init:
 
 
 get_input:
+    ; save previous frame's input
+    ld a, [UserInput]
+    ld [LastUserInput], a
+
     ld a, %00010000 ; select D-pad
     ld [rP1], a
     ld a, [rP1]

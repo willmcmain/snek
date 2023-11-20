@@ -21,6 +21,8 @@ Lives::
     DS 1
 LivesDisplay::
     DS 2
+Pause::
+    DS 1
 RNG::
     DS 2
 Score::
@@ -54,6 +56,8 @@ SnekSegmentArray::
     DS SNEK_SEGMENT_SIZE * SNEK_MAX_LEN + 2
 ; The number of current segments
 UserInput::
+    DS 1
+LastUserInput::
     DS 1
 
 
