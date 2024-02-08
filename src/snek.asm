@@ -2,11 +2,53 @@ INCLUDE "src/hw.inc"
 INCLUDE "src/constants.inc"
 
 SECTION "Snek Code", ROM0
+
 ;#######################################################################################
+; INITIALIZATION
+;#######################################################################################
+
+; ====================
 ; Initialize the scene
 snek_init::
     SetSceneUpdate snek_update
+    SetSceneVblank snek_vblank
 
+    ld a, 0
+    ld [Score], a
+    ld [Score+1], a
+    ld [Pause], a
+    ld a, 3
+    ld [Lives], a
+    call init_round
+
+    ret
+
+
+; =====================
+; Initialize each round
+init_round:
+    ld a, 0
+    ld [AppleCount], a
+    ld [Dead], a
+    ld [DeadCounter], a
+    ld [ExplosionAnimationCounter], a
+    ld a, EXPLOSION_TILE_0
+    ld [ExplosionTile], a
+
+    call stop_lcd
+    call init_bgdata
+    call init_snek_tiles
+    call random_apple_pos
+    call render_score
+    call render_lives
+    call start_lcd
+    ret
+
+
+; =======================
+; load initial snek tiles
+init_snek_tiles:
+    ; set initial snek values
     ld a, SNEK_FACE_UP
     ld [SnekFace], a
     ld [SnekNextFace], a
@@ -20,6 +62,7 @@ snek_init::
     ld a, 15
     ld [SnekMvSpeed], a
 
+    ; set initial segments
     ld a, 3
     ld [SnekLength], a
 
@@ -45,34 +88,96 @@ snek_init::
     ld a, SNEK_START_Y + 3
     ld [hl+], a
 
-    call init_snek_tiles
+    ; load segments into vram
+    ld a, [SnekLength]
+    ld b, a
+    ld c, 0
 
-    ld a, 0
-    ld [Dead], a
-    ld [DeadCounter], a
-    ld [ExplosionAnimationCounter], a
-    ld [Score], a
-    ld [Score+1], a
-    ld [AppleCount], a
-    ld [Pause], a
-    ld a, 3
-    ld [Lives], a
-    ld a, EXPLOSION_TILE_0
-    ld [ExplosionTile], a
-    call random_apple_pos
-    call render_score
-    call render_lives
+.loop_segments
+    push bc ; b = arraylen, c = counter
+    ld b, 0
+    ld hl, SnekSegmentArray
+    ; add index * 2 for segment size
+    add hl, bc
+    add hl, bc
+
+    ; load the x,y value of the segment into b,c
+    ; add 1 to x and 2 to y because the position does not count the border tiles
+    ld a, [hl+]
+    ld b, a
+    ld c, [hl]
+
+    call get_tile_map_coordinates
+
+    ; if this is the final segment, jump to the end
+    pop bc
+    ld a, b
+    cp a, c
+    jr z, .end
+
+    ; load snek segment tile and loop
+    ld [hl], SEGMENT_TILE
+    inc c
+    jr .loop_segments
+.end
     ret
 
+; ===========================
+; initialize background tiles
+init_bgdata:
+    ld a, EMPTY_TILE
+    ld hl, TILE_MAP_0
+    ld bc, 32 * 18
+    call memset16
+
+    ; lives display
+    ld a, SNEK_ICON_TILE
+    ld [TILE_MAP_0+16], a
+    ld a, X_TILE
+    ld [TILE_MAP_0+17], a
+
+    ; top
+    ld a, BLOCK_TILE
+    ld hl, TILE_MAP_0 + 32
+    ld c, 20
+    call memset8
+
+    ; bottom
+    ld a, BLOCK_TILE
+    ld hl, TILE_MAP_0 + 32 * 17
+    ld c, 20
+    call memset8
+
+    ; sides
+    ld c, BLOCK_TILE
+    ld b, 15
+    ld hl, TILE_MAP_0 + 32 * 2
+
+.loop
+    ld [hl], c
+    ld de, 19
+    add hl, de
+
+    ld [hl], c
+    ld de, 13
+    add hl, de
+
+    dec b
+    jr nz, .loop
+
+    ret
 
 ;#######################################################################################
+; VBlank
+;#######################################################################################
+
+; ==============
+; vblank handler
 ; load snake tiles into VRAM each frame
-;
-; call once during each vblank
 snek_vblank::
     ld a, [Dead]
     cp a, 0
-    jr nz, snek_vblank_dead
+    jr nz, vblank_dead
 
     ; delete the last tile
     ld hl, SnekSegmentArray
@@ -106,7 +211,6 @@ snek_vblank::
     ; add a, 2
     ld c, a
     call get_tile_map_coordinates
-
     ld [hl], APPLE_TILE
 
     ; set lives display tiles
@@ -131,7 +235,10 @@ snek_vblank::
 
     ret
 
-snek_vblank_dead:
+
+; ==================================
+; Animate explosions if snek is dead
+vblank_dead:
     ld a, [DeadCounter]
     cp a, 59
     jr nz, .expl_anim
@@ -161,7 +268,6 @@ snek_vblank_dead:
     ld [ExplosionTile], a
 .end
 
-
     ld hl, SnekSegmentArray
     ld a, [SnekLength]
     ld d, a
@@ -188,22 +294,24 @@ snek_vblank_dead:
     ret
 
 
-
 ;#######################################################################################
+; UPDATE
+;#######################################################################################
+
+; ======================
 ; update snek each frame
 snek_update::
+    ; if we're currently dead run the dead state update instead
+    ld a, [Dead]
+    cp a, 0
+    jp nz, dead_update
+
     call check_pause_button
     ; don't do anything if we're paused
     ld a, [Pause]
     cp a, 0
     ret nz
 
-    ; if we're currently dead run the dead state update instead
-    ld a, [Dead]
-    cp a, 0
-    jr z, .alive
-    call snek_dead_update
-    ret
 
 .alive
     call set_direction
@@ -283,7 +391,6 @@ snek_update::
     call render_lives
 .end_life_up
 
-
     ; update score
     ld a, [Score]
     ld h, a
@@ -302,13 +409,34 @@ snek_update::
 .next
     ret
 
-;#######################################################################################
+
+; =======================================
 ; update each frame when the snek is dead
-snek_dead_update:
+dead_update:
+    ; check if death animation is finished before allowing user to reset
+    ld a, [DeadCounter]
+    cp a, 59
+    ret nz
+
+    ; check for any input to restart the scene
+    ld a, [UserInput]
+    cp a, 0
+    ret z
+
+    ld a, [Lives]
+    cp a, 0
+    jr z, .return
+
+    dec a
+    ld [Lives], a
+    call init_round
+.return
     ret
 
-;#######################################################################################
-; check if pause button has been pressed and toggle pause if it has
+
+; =============
+; check if pause button has been pressed
+; and toggle pause if it has
 check_pause_button:
     ld a, [UserInput]
     and BUTTON_START
@@ -327,46 +455,12 @@ check_pause_button:
     ld [Pause], a
     ret
 
-;#######################################################################################
-; load snek tiles on scene init
-init_snek_tiles:
-    ld a, [SnekLength]
-    ld b, a
-    ld c, 0
 
-.loop_segments
-    push bc ; b = arraylen, c = counter
-    ld b, 0
-    ld hl, SnekSegmentArray
-    ; add index * 2 for segment size
-    add hl, bc
-    add hl, bc
-
-    ; load the x,y value of the segment into b,c
-    ; add 1 to x and 2 to y because the position does not count the border tiles
-    ld a, [hl+]
-    ld b, a
-    ld c, [hl]
-
-    call get_tile_map_coordinates
-
-    ; if this is the final segment, jump to the end
-    pop bc
-    ld a, b
-    cp a, c
-    jr z, .end
-
-    ; load snek segment tile and loop
-    ld [hl], SEGMENT_TILE
-    inc c
-    jr .loop_segments
-.end
-    ret
-
-
-;#######################################################################################
+; ==================
+; render score tiles
+;
 ; convert the score to decimal and set the digit tiles in memory
-; tiles are kept in memory then copied to VRAM by the snek_vblank subroutine
+; tiles are kept in ScoreDisplay then copied to VRAM by the snek_vblank subroutine
 render_score:
     ; To render the score tiles, we need to get each decimal digit; each time we
     ; divide the score by 10 we get the lowest digit as the remainder, we then use that
@@ -399,9 +493,11 @@ render_score:
     ret
 
 
-;#######################################################################################
+; ==================
+; render lives tiles
+; 
 ; convert the # of lives to decimal and set the digit tiles in memory
-; tiles are kept in memory then copied to VRAM by the snek_vblank subroutine
+; tiles are kept in LivesDisplay then copied to VRAM by the snek_vblank subroutine
 render_lives:
     ld a, $00
     ld h, a
@@ -418,7 +514,9 @@ render_lives:
     ld [LivesDisplay], a
     ret
 
-;#######################################################################################
+
+; ================================
+; set SnekFace based on user input
 set_direction:
 ; for each direction, we check if we're going the opposite direction before setting
 ; the new direction
@@ -462,8 +560,11 @@ ENDM
     ret
 
 
-
-;#######################################################################################
+; ==================================
+; calculate the snek's next position
+;
+; calculates the position of the snek's head on the next step, based on the direction
+; it's facing
 set_next_pos:
     ld a, [SnekSegmentArray]
     ld [SnekNextPos], a
@@ -496,7 +597,8 @@ set_next_pos:
     ret
 
 
-;#######################################################################################
+; ============================
+; shift snake segments forward
 shift_segments:
     ; copy snake segments one segment later
     ld hl, SnekSegmentArray
@@ -535,7 +637,8 @@ shift_segments:
     ret
 
 
-;#######################################################################################
+; =================================
+; generate apple at random position
 random_apple_pos:
     ; random number from 0 to 17
     call advance_rng
@@ -586,7 +689,9 @@ random_apple_pos:
     jr nz, random_apple_pos
     ret
 
-;#######################################################################################
+
+; ===============================
+; check if apple and snek overlap
 check_apple_overlaps_snek:
     ld a, [SnekLength]
     ld d, a
@@ -613,7 +718,9 @@ check_apple_overlaps_snek:
     ld a, 0
     ret
 
-;#######################################################################################
+
+; ========================
+; check for snek collision
 check_collision:
     ; check if collides with walls
     ld a, [SnekNextPos]

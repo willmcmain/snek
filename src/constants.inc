@@ -38,4 +38,12 @@ MACRO SetSceneUpdate
     ld [SceneUpdate+1], a
 ENDM
 
+MACRO SetSceneVblank
+    ld hl, \1
+    ld a, h
+    ld [SceneVblank], a
+    ld a, l
+    ld [SceneVblank+1], a
+ENDM
+
 ENDC

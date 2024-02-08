@@ -78,7 +78,16 @@ vblank:
     push bc
     push de
     push hl
-    call snek_vblank
+    ; call SceneVblank
+    ld hl, .return
+    push hl
+    ld a, [SceneVblank]
+    ld h, a
+    ld a, [SceneVblank+1]
+    ld l, a
+    jp hl
+.return
+
     ld a, 1
     ld [IsVblank], a
     pop hl
@@ -95,7 +104,6 @@ init:
     ; set everything up
     call stop_lcd
     call load_tiledata
-    call load_bgdata
     call snek_init
 
     ; zero out OAM
@@ -109,7 +117,6 @@ init:
     ld [RNG], a
     ldh a, [rDIV]
     ld [RNG+1], a
-
 
     ; load pallette and start lcd
     ld a, %11100100
@@ -155,64 +162,8 @@ get_input:
     ret
 
 
-stop_lcd:
-.wait
-    ld a, [rLY]
-    cp 144
-    jr nz,.wait
-
-    ld a, [rLCDC]
-    res 7,a
-    ld [rLCDC], a
-    ret
-
-
 load_tiledata:
     ld hl, TILE_DATA
     ld de, TILE_BLOCK_0
     ld bc, TILE_DATA_END-TILE_DATA
     call memcpy16
-
-
-load_bgdata:
-    ld a, EMPTY_TILE
-    ld hl, TILE_MAP_0
-    ld bc, 32 * 18
-    call memset16
-
-    ; lives display
-    ld a, SNEK_ICON_TILE
-    ld [TILE_MAP_0+16], a
-    ld a, X_TILE
-    ld [TILE_MAP_0+17], a
-
-    ; top
-    ld a, BLOCK_TILE
-    ld hl, TILE_MAP_0 + 32
-    ld c, 20
-    call memset8
-
-    ; bottom
-    ld a, BLOCK_TILE
-    ld hl, TILE_MAP_0 + 32 * 17
-    ld c, 20
-    call memset8
-
-    ; sides
-    ld c, BLOCK_TILE
-    ld b, 15
-    ld hl, TILE_MAP_0 + 32 * 2
-
-.loop
-    ld [hl], c
-    ld de, 19
-    add hl, de
-
-    ld [hl], c
-    ld de, 13
-    add hl, de
-
-    dec b
-    jr nz, .loop
-
-    ret

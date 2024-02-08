@@ -31,6 +31,8 @@ ScoreDisplay::
     DS 5
 SceneUpdate::
     DS 2
+SceneVblank::
+    DS 2
 SnekFace:: ; 0 = up, 1 = right, 2 = down, 3 = left
     DS 1
 SnekLength::
