@@ -177,7 +177,8 @@ init_bgdata:
 snek_vblank::
     ld a, [Dead]
     cp a, 0
-    jr nz, vblank_dead
+    ; jr nz, vblank_dead
+    jr nz, .dead
 
     ; delete the last tile
     ld hl, SnekSegmentArray
@@ -233,6 +234,17 @@ snek_vblank::
     ld a, [hl]
     ld [TILE_MAP_0+4], a
 
+    ret
+.dead
+    call vblank_dead
+    ld a, [DeadCounter]
+    cp a, 59
+    jr nz, .dead_end
+    ld a, [Lives]
+    cp a, 0
+    jr nz, .dead_end
+    call vblank_gameover
+.dead_end
     ret
 
 
@@ -291,6 +303,19 @@ vblank_dead:
     dec d
     jr .render
 .end_render
+    ret
+
+; ===================
+; Show game over text
+STR_GAME_OVER:
+db "GAME OVER!"
+
+vblank_gameover:
+    ld de, TILE_MAP_0 + $105
+    ; ld de, hl
+    ld hl, STR_GAME_OVER
+    ld c, 10
+    call memcpy8
     ret
 
 

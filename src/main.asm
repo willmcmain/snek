@@ -103,8 +103,6 @@ init:
 
     ; set everything up
     call stop_lcd
-    call load_tiledata
-    call snek_init
 
     ; zero out OAM
     ld a, $00
@@ -118,13 +116,16 @@ init:
     ldh a, [rDIV]
     ld [RNG+1], a
 
-    ; load pallette and start lcd
+    ; load pallette and set lcd flags
     ld a, %11100100
     ld [rBGP], a
     ld [rOBP0], a
     ld [rOBP1], a
-    ld a, %10010011
+    ld a, %00010001
     ld [rLCDC], a
+
+    call load_tiledata
+    call snek_init
 
     ; enable interrupts
     ld a, %00010001
